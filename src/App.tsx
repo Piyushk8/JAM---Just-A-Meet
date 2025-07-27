@@ -58,12 +58,12 @@ function App() {
     ServerToClient,
     ClientToServer
   > | null>(null);
-  const [users, setUsers] = useState<Map<string, User>>(new Map());
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [username, setUsername] = useState("");
+  const [users, setUsers] = useState<Map<string, User>>(new Map()); // all users in the room with their postions
+  const [currentUser, setCurrentUser] = useState<User | null>(null); // me and my info
+  const [username, setUsername] = useState(""); // my usernmae
   const [roomId, setRoomId] = useState("room1");
   const [isJoined, setIsJoined] = useState(false);
-  const [nearbyUsers, setNearbyUsers] = useState<User[]>([]);
+  const [nearbyUsers, setNearbyUsers] = useState<User[]>([]); // all of my users in proximity_ threshold (200px)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingUser>>(
@@ -72,9 +72,9 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
-  const [connectedPeers, setConnectedPeers] = useState<number>(0);
-  const [liveKitManager, setLiveKitManager] = useState<LiveKitManager | null>(
-    null
+  const [connectedPeers, setConnectedPeers] = useState<number>(0); // just number of nearby users
+  const [liveKitManager, setLiveKitManager] = useState<LiveKitManager>(
+    new LiveKitManager()
   );
 
   const roomRef = useRef<HTMLDivElement>(null);
@@ -84,6 +84,8 @@ function App() {
   useEffect(() => {
     const newSocket = io("http://localhost:3000", { withCredentials: true });
     setSocket(newSocket);
+    // setLiveKitManager(new LiveKitManager());
+
     // Initialize WebRTC Manager
     console.log(newSocket);
 
@@ -115,47 +117,27 @@ function App() {
       setNearbyUsers((prev) => prev.filter((user) => user.id !== userId));
     });
 
-    // Proximity events
-    // newSocket.on("proximity-entered", (user: User) => {
-    //   console.log(`${user.username} entered proximity`);
-    // });
-
-    // newSocket.on("proximity-left", (user: User) => {
-    //   console.log(`${user.username} left proximity`);
-    // });
-
     newSocket.on("room-sync", (payload: RoomSyncPayload) => {
       const { me, players, proximity, audio } = payload;
-
-      // 1) Update my own authoritative position
+      // 1) Update my position
       setCurrentUser((prev) => (prev ? { ...prev, ...me } : prev));
-
-      // 2) Upsert players
+      // 2) Upsert players into the global users map
       setUsers((prev) => {
         const map = new Map(prev);
         for (const p of players) {
-          const old = map.get(p.id);
-          map.set(p.id, {
-            ...old,
-            ...p,
-          });
+          map.set(p.id, { ...map.get(p.id), ...p });
         }
         return map;
       });
 
-      // 3) Maintain a list of "nearby" = those in players, since server already filtered to <= PROXIMITY_THRESHOLD
-      setNearbyUsers(
-        players.map((p) => ({
-          ...p,
-          isAudioEnabled: users.get(p.id)?.isAudioEnabled,
-          isVideoEnabled: users.get(p.id)?.isVideoEnabled,
-        }))
-      );
+      // 3) Nearby snapshot (full current set, cheap to render UI)
+      setNearbyUsers(players);
+      // 4) A/V proximity management (diff-based)
+      liveKitManager?.syncSubscriptions(proximity.entered, proximity.left);
 
-      setConnectedPeers(players.length);
-
-      // 4) (Future) Adjust audio gain per "audio" array coming from server
-      // audio.forEach(({ id, level }) => livekitOrWebrtc?.setGain(id, level));
+      // setConnectedPeers()
+      // 5) Optional spatial falloff
+      // liveKitManager?.applyAudioLevels(audio);
     });
 
     // Media state updates
@@ -232,19 +214,17 @@ function App() {
 
             // Live kit connection
 
-            const Manager = new LiveKitManager();
-            setLiveKitManager(Manager);
-
             // getting access token to access the livekit server and rooms
-            const token = await fetchLiveKitToken(username, roomId);
+            if (!socket.id) return;
+            const token = await fetchLiveKitToken(socket.id, roomId);
 
-            await Manager?.join({
+            await liveKitManager?.join({
               url: "ws://localhost:7880",
               token,
               enableAudio: true,
               enableVideo: true,
             });
-            setIsAudioEnabled(true);
+            setIsAudioEnabled(false);
 
             const attachLocalTracks = (room: Room) => {
               const container = document.getElementById("livekit-container");
@@ -416,7 +396,7 @@ function App() {
       <div
         id="livekit-container"
         className="livekit-video-grid "
-        style={{ height: 300, width: 300 }}
+        style={{ height: 300, width: 300 , zIndex:1000}}
       ></div>
 
       <div
