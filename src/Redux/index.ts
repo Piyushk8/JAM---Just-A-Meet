@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
-import livekitReducer from './slice';
+import livekitReducer from './roomState';
 
 export const store = configureStore({
   reducer: {

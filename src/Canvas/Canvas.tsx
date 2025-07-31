@@ -12,8 +12,10 @@ export default function Canvas() {
 
   useEffect(() => {
     // Load the map JSON
-    fetch("assets/map/map.json")
-      .then((res) => res.json())
+    fetch(`${"http://localhost:5173"}/assets/map/map.json`)
+      .then((res) =>{
+        // console.log(res.json())
+        return res.json()})
       .then(setMapData);
 
     // Load the image ONCE using ref
@@ -66,7 +68,7 @@ export default function Canvas() {
     };
     loadCharacters();
   }, []);
-  // console.log(mapData);
+  
   return (
     <>
       {mapData && Object.keys(tilesetImages).length > 0 && characters && (

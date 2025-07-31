@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
-import PhaserRoom from './components/PhaserRoom';
-import './App.css';
-import { WebRTCManager } from './lib/utils';
+import PhaserRoom from './components/Room';
+// import './App.css';
+// import { WebRTCManager } from './lib/utils';
 
 interface User {
   id: string;

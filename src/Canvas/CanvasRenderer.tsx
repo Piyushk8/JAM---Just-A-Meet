@@ -19,7 +19,7 @@ export default function CanvasRenderer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const backgroundCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const [playerPosition, setPlayerPosition] = useState({ x: 5, y: 5 });
+  const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
 
   // Render the background once (static elements)
   const renderBackground = useCallback(() => {

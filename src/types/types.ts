@@ -1,9 +1,9 @@
-export interface userData{
-    id:string
-    username:string
-    x:number
-    y:number
-    socketId:string
+export interface userData {
+  id: string;
+  username: string;
+  x: number;
+  y: number;
+  socketId: string;
 }
 
 export interface User {
@@ -13,9 +13,9 @@ export interface User {
   y: number;
   socketId: string;
   roomId: string;
-  isAudioEnabled: boolean;
-  isVideoEnabled: boolean;
-  peerId?: string;
+  isAudioEnabled?: boolean;
+  isVideoEnabled?: boolean;
+  sprite: string | null;
 }
 
 export interface Room {
@@ -28,7 +28,7 @@ export interface ChatMessage {
   userId: string;
   username: string;
   message: string;
-  type: 'text' | 'emoji';
+  type: "text" | "emoji";
   timestamp: string;
   x: number;
   y: number;
@@ -47,20 +47,13 @@ export interface ProximityUser extends User {
 export type RoomSyncPayload = {
   ts: number;
   me: { x: number; y: number };
-  players: Array<{
-    id: string;
-    x: number;
-    y: number;
-    username: string;
-  }>;
+  players: Array<Partial<User>>;
   proximity: {
     entered: string[];
     left: string[];
   };
   audio: Array<{ id: string; level: number }>;
 };
-
-
 
 export type ServerToClient = {
   "room-users": (users: User[]) => void;
