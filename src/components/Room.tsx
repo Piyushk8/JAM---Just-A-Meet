@@ -20,6 +20,8 @@ import {
 import Canvas from "../Canvas/Canvas";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
+import { getSocket } from "../socket";
+import { useSocket } from "../SocketProvider";
 
 interface ChatMessage {
   id: string;
@@ -54,10 +56,7 @@ type RemotePlayer = {
 const players: Map<string, RemotePlayer> = new Map();
 
 export default function PhaserRoom() {
-  const [socket, setSocket] = useState<Socket<
-    ServerToClient,
-    ClientToServer
-  > | null>(null);
+  const socket = useSocket();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingUser>>(
@@ -81,113 +80,107 @@ export default function PhaserRoom() {
     roomId,
     isAudioEnabled,
     isVideoEnabled,
+    // usersInRoom,
   } = useSelector((state: RootState) => state.roomState);
   const dispatch = useDispatch();
+
   useEffect(() => {
-    const newSocket = io("http://localhost:3000", { withCredentials: true });
-    setSocket(newSocket);
-    // setLiveKitManager(new LiveKitManager());
+    // Define all event handlers
+    const handleConnect = () => {
+      console.log("Connected to server with socket ID:", socket.id);
+    };
 
-    // Initialize WebRTC Manager
-    console.log(newSocket);
-
-    newSocket.on("connect", () => {
-      console.log("Connected to server with socket ID:", newSocket.id);
-    });
-    // to get users in the room on joining
-    newSocket.on("room-users", (roomUsers: User[]) => {
-      //!make sure to remove current user from it
-      dispatch(updateUsersInRoom(roomUsers));
-    });
-
-    newSocket.on("user-joined", (user: User) => {
-      if (user.id !== newSocket.id) {
+    const handleUserJoined = (user: User) => {
+      console.log("hereeeeeeeeeeeeeeeeeeeeeeeeee", user);
+      if (user.id !== socket.id) {
+        console.log("joined✅", user);
         dispatch(addUserInRoom({ userId: user.id, user }));
       }
-    });
+    };
 
-    newSocket.on("user-left", (userId: string) => {
+    const handleUserLeft = (userId: string) => {
+      console.log("hereeeeeeeeeeeeeeeeeeeeeeeeeebyeeeeeeeee", userId);
+      console.log("left❌", userId);
       dispatch(removeFromUsersInRoom(userId));
       dispatch(updateNearbyParticipants({ left: [userId], joined: null }));
-    });
+    };
 
-    newSocket.on("room-sync", (payload: RoomSyncPayload) => {
+    const handleRoomSync = (payload: RoomSyncPayload) => {
       const { me, players, proximity, audio } = payload;
-      // 1) Update my position
       dispatch(updateCurrentUser(me));
-      // 2) Upsert players into the global users map
       dispatch(updateUsersInRoom(players));
-      // dispatch(setUsersInRoom())
-      // 3) Nearby snapshot (full current set, cheap to render UI)
       dispatch(
         updateNearbyParticipants({
           left: proximity.left,
           joined: proximity.entered,
         })
       );
-      // dispatch(updateNearbyParticipants(players))
-      // 4) A/V proximity management (diff-based)
+
       liveKitManager?.syncSubscriptions(proximity.entered, proximity.left);
+    };
 
-      // setConnectedPeers()
-      // 5) Optional spatial falloff
-      // liveKitManager?.applyAudioLevels(audio);
-    });
+    const handleUserMediaStateChanged = ({
+      userId,
+      isAudioEnabled,
+      isVideoEnabled,
+    }: {
+      userId: string;
+      isAudioEnabled: boolean;
+      isVideoEnabled: boolean;
+    }) => {
+      dispatch(
+        updateUsersInRoom([
+          {
+            id: userId,
+            isAudioEnabled,
+            isVideoEnabled,
+          },
+        ])
+      );
+    };
 
-    // Media state updates
-    newSocket.on(
-      "user-media-state-changed",
-      ({
-        userId,
-        isAudioEnabled,
-        isVideoEnabled,
-      }: {
-        userId: string;
-        isAudioEnabled: boolean;
-        isVideoEnabled: boolean;
-      }) => {
-        // console.log("herere ", userId, isAudioEnabled, isVideoEnabled);
-        dispatch(
-          updateUsersInRoom([
-            {
-              id: userId,
-              isAudioEnabled,
-              isVideoEnabled,
-            },
-          ])
-        );
-      }
-    );
-
-    // Chat events
-    newSocket.on("message-received", (message: ChatMessage) => {
-      setMessages((prev) => [...prev, message].slice(-50)); // Keep last 50 messages
-    });
-
-    newSocket.on("message-sent", (message: ChatMessage) => {
+    const handleMessageReceived = (message: ChatMessage) => {
       setMessages((prev) => [...prev, message].slice(-50));
-    });
+    };
 
-    newSocket.on(
-      "user-typing",
-      ({ userId, username, isTyping }: TypingUser) => {
-        setTypingUsers((prev) => {
-          const newTyping = new Map(prev);
-          if (isTyping) {
-            newTyping.set(userId, { userId, username, isTyping });
-          } else {
-            newTyping.delete(userId);
-          }
-          return newTyping;
-        });
-      }
-    );
+    const handleMessageSent = (message: ChatMessage) => {
+      setMessages((prev) => [...prev, message].slice(-50));
+    };
+
+    const handleUserTyping = ({ userId, username, isTyping }: TypingUser) => {
+      setTypingUsers((prev) => {
+        const newTyping = new Map(prev);
+        if (isTyping) {
+          newTyping.set(userId, { userId, username, isTyping });
+        } else {
+          newTyping.delete(userId);
+        }
+        return newTyping;
+      });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("user-joined", handleUserJoined);
+    socket.on("user-left", handleUserLeft);
+    socket.on("room-sync", handleRoomSync);
+    socket.on("user-media-state-changed", handleUserMediaStateChanged);
+    socket.on("message-received", handleMessageReceived);
+    socket.on("message-sent", handleMessageSent);
+    socket.on("user-typing", handleUserTyping);
 
     return () => {
+      socket.off("connect", handleConnect);
+      socket.off("user-joined", handleUserJoined);
+      socket.off("user-left", handleUserLeft);
+      socket.off("room-sync", handleRoomSync);
+      socket.off("user-media-state-changed", handleUserMediaStateChanged);
+      socket.off("message-received", handleMessageReceived);
+      socket.off("message-sent", handleMessageSent);
+      socket.off("user-typing", handleUserTyping);
+
       liveKitManager?.cleanup();
-      newSocket.close();
     };
-  }, []);
+  }, [socket, dispatch, liveKitManager]);
 
   const toggleAudio = async () => {
     if (liveKitManager) {

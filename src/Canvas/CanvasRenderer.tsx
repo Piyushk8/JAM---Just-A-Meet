@@ -1,16 +1,22 @@
-
 // components/CanvasRenderer.tsx - Updated version
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { TiledMap } from "../types/canvas";
 import { findTilesetForGID } from "../lib/helper";
 import Player from "./Player";
-
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../Redux";
+import {
+  addUserInRoom,
+  setCurrentUser,
+  updateCurrentUser,
+} from "../Redux/roomState";
+import type { User } from "../types/types";
 const TILE_SIZE = 32;
 
 export default function CanvasRenderer({
   mapData,
   tilesetImages,
-  characters
+  characters,
 }: {
   characters: HTMLImageElement[];
   mapData: TiledMap;
@@ -19,11 +25,43 @@ export default function CanvasRenderer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const backgroundCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const [playerPosition, setPlayerPosition] = useState({ x: 0, y: 0 });
+  const { currentUser, usersInRoom } = useSelector(
+    (state: RootState) => state.roomState
+  );
+  // const userId = crypto.randomUUID();
+  // const dispatch = useDispatch();
+  // dispatch(
+  //   addUserInRoom({
+  //     user: {
+  //       id: userId,
+  //       username: "kartik",
+  //       x: 1,
+  //       y: 1,
+  //       socketId: "",
+  //       roomId: "room1",
+  //       sprite: "",
+  //     },
+  //     userId: userId,
+  //   })
+  // );
+  console.log(
+    "canvas rebder",
+    currentUser,
+    mapData.height,
+    usersInRoom
+  );
+  if (!currentUser) {
+    return;
+  }
 
   // Render the background once (static elements)
   const renderBackground = useCallback(() => {
-    if (!mapData || Object.keys(tilesetImages).length === 0 || !backgroundCanvasRef.current) return;
+    if (
+      !mapData ||
+      Object.keys(tilesetImages).length === 0 ||
+      !backgroundCanvasRef.current
+    )
+      return;
 
     const bgCanvas = backgroundCanvasRef.current;
     const bgCtx = bgCanvas.getContext("2d");
@@ -39,7 +77,8 @@ export default function CanvasRenderer({
     // Render all layers except collision-only layers
     mapData.layers.forEach((layer) => {
       // Skip pure collision layers (no visual representation)
-      const isCollisionOnly = layer.name.toLowerCase().includes("collision") && 
+      const isCollisionOnly =
+        layer.name.toLowerCase().includes("collision") &&
         !layer.name.toLowerCase().includes("visual");
 
       if (isCollisionOnly) return;
@@ -72,7 +111,10 @@ export default function CanvasRenderer({
         });
       }
 
-      if (layer.type === "objectgroup" && Array.isArray((layer as any).objects)) {
+      if (
+        layer.type === "objectgroup" &&
+        Array.isArray((layer as any).objects)
+      ) {
         (layer as any).objects.forEach((obj: any) => {
           const gid = obj.gid;
           if (!gid) return;
@@ -104,36 +146,52 @@ export default function CanvasRenderer({
   }, [mapData, tilesetImages]);
 
   // Render the player on the main canvas
-  const renderPlayer = useCallback((ctx: CanvasRenderingContext2D) => {
-    if (!characters[0]) return;
+  const renderPlayer = useCallback(
+    (ctx: CanvasRenderingContext2D, player: User) => {
+      // console.log(characters[0], player);
+      if (!characters[0] || !player) return;
 
-    // Clear the main canvas
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      // Clear the main canvas
+      // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Draw background
-    if (backgroundCanvasRef.current) {
-      ctx.drawImage(backgroundCanvasRef.current, 0, 0);
-    }
+      // // Draw background
+      // if (backgroundCanvasRef.current) {
+      //   ctx.drawImage(backgroundCanvasRef.current, 0, 0);
+      // }
 
-    // Draw player
-    ctx.drawImage(
-      characters[0],
-      playerPosition.x * TILE_SIZE,
-      playerPosition.y * TILE_SIZE,
-      TILE_SIZE,
-      TILE_SIZE
-    );
-  }, [characters, playerPosition]);
+      // Draw player
+      ctx.drawImage(
+        characters[0],
+        player.x * TILE_SIZE,
+        player.y * TILE_SIZE,
+        TILE_SIZE,
+        TILE_SIZE
+      );
+    },
+    [characters, currentUser.x, currentUser.y]
+  );
 
   // Main render loop
   const render = useCallback(() => {
     const canvas = canvasRef.current;
+    // console.log("canvas", canvas?.height);
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    renderPlayer(ctx);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (backgroundCanvasRef.current) {
+      ctx.drawImage(backgroundCanvasRef.current, 0, 0);
+    }
+
+    // Draw all players
+    // [currentUser, ...usersInRoom.values()].forEach((player) => {
+    //   renderPlayer(ctx, player);
+    // });
+    [currentUser, ...Object.values(usersInRoom)].forEach((player) => {
+      renderPlayer(ctx, player);
+    });
 
     // Continue the render loop
     animationFrameRef.current = requestAnimationFrame(render);
@@ -141,7 +199,13 @@ export default function CanvasRenderer({
 
   // Initialize canvases and start render loop
   useEffect(() => {
-    if (!mapData || !canvasRef.current || !backgroundCanvasRef.current || Object.keys(tilesetImages).length === 0) return;
+    if (
+      !mapData ||
+      !canvasRef.current ||
+      !backgroundCanvasRef.current ||
+      Object.keys(tilesetImages).length === 0
+    )
+      return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -166,19 +230,20 @@ export default function CanvasRenderer({
   }, [mapData, tilesetImages, render, renderBackground]);
 
   return (
-    <div className="relative" style={{backgroundColor:"black"}}>
+    <div className="relative" style={{ backgroundColor: "black" }}>
       <div className="flex h-14 w-lg shadow-2xl ring-1 ring-offset-white rounded-b-lg sticky top-2 left-1/2 transform -translate-x-1/2 z-10 text-red-300">
         video section
-        <video src=""/>
-        <img className="bg-green-200" src="\assets\character\single\Adam_idle_anim_1.png" alt="" />
+        <video src="" />
+        <img
+          className="bg-green-200"
+          src="\assets\character\single\Adam_idle_anim_1.png"
+          alt=""
+        />
       </div>
       <div className="h-95vh bg-sky-300">
         {/* Hidden background canvas */}
-        <canvas
-          ref={backgroundCanvasRef}
-          style={{ display: 'none' }}
-        />
-        
+        <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />
+
         {/* Main visible canvas */}
         <canvas
           ref={canvasRef}
@@ -189,14 +254,13 @@ export default function CanvasRenderer({
             imageRendering: "pixelated",
           }}
         />
-        
+
         <Player
           ctx={canvasRef.current?.getContext("2d") || null}
           mapData={mapData}
           tilesize={TILE_SIZE}
           playerImage={characters[0]}
-          playerPosition={playerPosition}
-          onPositionChange={setPlayerPosition}
+          playerPosition={{ x: currentUser.x, y: currentUser.y }}
         />
       </div>
     </div>

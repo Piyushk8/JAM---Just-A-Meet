@@ -1,6 +1,10 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import JoinRoom from "./Pages/JoinRoom";
 import Canvas from "./Canvas/Canvas";
+import { connectSocket, getSocket } from "./socket";
+import PhaserRoom from "./components/Room";
+import { SocketProvider } from "./SocketProvider";
+import { useMemo } from "react";
 
 interface User {
   id: string;
@@ -44,15 +48,19 @@ type RemotePlayer = {
 
 const players: Map<string, RemotePlayer> = new Map();
 function App() {
+  const randomUserId = useMemo(() => crypto.randomUUID(), []);
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<JoinRoom />} />
-        <Route path="/r/id" element={<Canvas/>} />
-      </Routes>
-    </BrowserRouter>
+  
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<JoinRoom />} />
+          <Route path="/home" element={<JoinRoom />} />
+          <Route path="/r/id" element={<PhaserRoom />} />
+        </Routes>
+      </BrowserRouter>
+  
   );
 }
-
 
 export default App;

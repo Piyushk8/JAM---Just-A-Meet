@@ -68,7 +68,7 @@ export default function Canvas() {
     };
     loadCharacters();
   }, []);
-  
+  // console.log(mapData)
   return (
     <>
       {mapData && Object.keys(tilesetImages).length > 0 && characters && (
@@ -84,7 +84,7 @@ export default function Canvas() {
 async function getImage(imagePath: string): Promise<HTMLImageElement | null> {
   const img = new Image();
   img.src = imagePath;
-  console.log(imagePath, img);
+  // console.log(imagePath, img);
   const loadedImage = await new Promise<boolean>((resolve) => {
     img.onload = () => resolve(true);
     img.onerror = () => resolve(false); // ✅ no rejection

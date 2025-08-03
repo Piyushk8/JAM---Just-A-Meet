@@ -1,22 +1,16 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import io, { Socket } from "socket.io-client";
 import "../App.css";
-// import { WebRTCManager } from "./lib/utils";
-import { socket as socketClient } from "../socket";
-import type {
-  ClientToServer,
-  RoomSyncPayload,
-  ServerToClient,
-} from "../types/types";
 import { LiveKitManager } from "../LiveKit/liveKitManager";
 import { fetchLiveKitToken } from "../LiveKit/helper";
 import type { Room } from "livekit-client";
-import { setCurrentUser, setIsAudioEnabled } from "../Redux/roomState";
-import PhaserRoom from "../components/Room";
-import GameContainer from "../components/Layout/phaserUI";
-import Canvas from "../Canvas/Canvas";
+import {
+  setCurrentUser,
+  setIsAudioEnabled,
+  updateUsersInRoom,
+} from "../Redux/roomState";
 import { useDispatch } from "react-redux";
+import { useSocket } from "../SocketProvider";
 interface User {
   id: string;
   username: string;
@@ -58,10 +52,7 @@ type RemotePlayer = {
 };
 
 export const JoinRoom = () => {
-  const [socket, setSocket] = useState<Socket<
-    ServerToClient,
-    ClientToServer
-  > | null>(null);
+  const socket = useSocket();
   const [username, setUsername] = useState(""); // my usernmae
   const [roomId, setRoomId] = useState("room1");
   const [isJoined, setIsJoined] = useState(true);
@@ -72,15 +63,18 @@ export const JoinRoom = () => {
   const nav = useNavigate();
 
   useEffect(() => {
-    const newSocket = io("http://localhost:3000", { withCredentials: true });
-    setSocket(newSocket);
-    newSocket.on("connect", () => {
-      console.log("Connected to server with socket ID:", newSocket.id);
-    });
-    return () => {
-      newSocket.close();
+    const handleRoomUsers = (roomUsers: User[]) => {
+      console.log("roomUsers", roomUsers);
+      dispatch(updateUsersInRoom(roomUsers));
     };
-  }, []);
+
+    // Add event listeners
+    socket.on("room-users", handleRoomUsers);
+
+    return () => {
+      socket.off("room-users", handleRoomUsers);
+    };
+  }, [socket, dispatch]);
 
   const joinRoom = async () => {
     if (socket && username.trim()) {
@@ -88,53 +82,71 @@ export const JoinRoom = () => {
         "join-room",
         { roomId, username },
         async (res: { success: boolean }) => {
-          if (!res || !res.success) {
-            console.log("Error in joining room");
-          } else {
-            // setting users starting location and adding it to a room
-            // getting access token to access the livekit server and rooms
-            if (!socket.id) return;
-            dispatch(
-              setCurrentUser({
-                id: socket.id,
-                username,
-                x: Math.random() * 0,
-                y: Math.random() * 0,
-                socketId: socket.id,
-                roomId: roomId,
-                isAudioEnabled: false,
-                isVideoEnabled: false,
-                sprite: "",
-              })
-            );
-            const token = await fetchLiveKitToken(socket.id, roomId);
+          try {
+            if (!res || !res.success) {
+              console.log("Error in joining room");
+            } else {
+              console.log(roomId, username);
+              // setting users starting location and adding it to a room
+              // getting access token to access the livekit server and rooms
+              if (!socket.id) return;
+              dispatch(
+                setCurrentUser({
+                  id: socket.id,
+                  username,
+                  x: Math.random() * 0,
+                  y: Math.random() * 0,
+                  socketId: socket.id,
+                  roomId: roomId,
+                  isAudioEnabled: false,
+                  isVideoEnabled: false,
+                  sprite: "",
+                })
+              );
+              if (!socket.id) return;
+              const token = await fetchLiveKitToken(socket.id, roomId);
 
-            await liveKitManager?.join({
-              url: "ws://localhost:7880",
-              token,
-              enableAudio: true,
-              enableVideo: true,
-            });
-            setIsAudioEnabled(false);
-            // nav("/r/id")
-            const attachLocalTracks = (room: Room) => {
-              const container = document.getElementById("livekit-container");
-              if (!container) return;
+              // // ✅ one-time call
 
-              // Clear any old video
-              container.innerHTML = "";
+              console.log("join token", token);
+              try {
+                const room = await liveKitManager?.join({
+                  url: "wss://virtualoffice-r2209kci.livekit.cloud",
+                  token,
+                  // url: "ws://localhost:7880",
+                  enableAudio: true,
+                  enableVideo: true,
+                });
+                setIsAudioEnabled(false);
 
-              room.localParticipant.getTrackPublications().forEach((pub) => {
-                if (pub.track) {
-                  const el = pub.track.attach();
-                  el.muted = true; // prevent echo
-                  el.autoplay = true;
-                  container.appendChild(el);
-                }
-              });
+                const attachLocalTracks = (room: Room) => {
+                  const container =
+                    document.getElementById("livekit-container");
+                  if (!container) return;
 
-              attachLocalTracks(room);
-            };
+                  // Clear any old video
+                  container.innerHTML = "";
+
+                  room.localParticipant
+                    .getTrackPublications()
+                    .forEach((pub) => {
+                      if (pub.track) {
+                        const el = pub.track.attach();
+                        el.muted = true; // prevent echo
+                        el.autoplay = true;
+                        container.appendChild(el);
+                      }
+                    });
+                };
+                attachLocalTracks(room);
+              } catch (err) {
+                console.error("LiveKit connection failed:", err);
+              }
+
+              nav("/r/id");
+            }
+          } catch (error) {
+            console.log("error joinig", error);
           }
         }
       );

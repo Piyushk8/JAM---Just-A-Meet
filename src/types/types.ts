@@ -55,6 +55,7 @@ export type RoomSyncPayload = {
   audio: Array<{ id: string; level: number }>;
 };
 
+
 export type ServerToClient = {
   "room-users": (users: User[]) => void;
   "user-joined": (user: User) => void;
@@ -74,7 +75,7 @@ export type ClientToServer = {
   "join-room": (
     data: { roomId: string; username: string },
     cb: (res: { success: boolean }) => void
-  ) => void;
+  ) => Promise<void>;
   "user-move": (data: { x: number; y: number }) => void;
   "media-state-changed": (data: {
     isAudioEnabled: boolean;

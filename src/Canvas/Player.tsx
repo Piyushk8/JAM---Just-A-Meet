@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { ObjectLayer, TiledMap, TileLayer } from "../types/canvas";
+import { useDispatch } from "react-redux";
+import { updateCurrentUser } from "../Redux/roomState";
 
 type Props = {
   mapData: TiledMap;
@@ -26,10 +28,15 @@ const Player = ({
 }: Props) => {
   const [internalPosition, setInternalPosition] = useState({ x: 5, y: 5 });
   const [collisionMap, setCollisionMap] = useState<CollisionMap | null>(null);
-
+  const dispatch = useDispatch();
   // Use external position if provided, otherwise use internal
   const playerPosition = externalPosition || internalPosition;
-  const updatePosition = onPositionChange || setInternalPosition;
+  const updatePosition = useCallback(
+    ({ x, y }: { x: number; y: number }) => {
+      dispatch(updateCurrentUser({ x, y }));
+    },
+    [playerPosition]
+  );
 
   // Build comprehensive collision map
   useEffect(() => {
@@ -43,18 +50,18 @@ const Player = ({
         .map(() => Array(mapData.width).fill(false)),
     };
 
-    console.log(
-      "Building collision map for",
-      mapData.width,
-      "x",
-      mapData.height
-    );
+    // console.log(
+    //   "Building collision map for",
+    //   mapData.width,
+    //   "x",
+    //   mapData.height
+    // );
 
     // Process all layers
     mapData.layers.forEach((layer, layerIndex) => {
-      console.log(
-        `Processing layer ${layerIndex}: ${layer.name} (${layer.type})`
-      );
+      // console.log(
+      //   `Processing layer ${layerIndex}: ${layer.name} (${layer.type})`
+      // );
       if (isTileLayer(layer)) {
         // Handle tile layers with collision property
         const hasCollisionProperty = (layer as any).properties?.some(
@@ -99,11 +106,11 @@ const Player = ({
       }
 
       if (isObjectLayer(layer)) {
-        console.log(`Processing object layer: ${(layer as any).name} `);
+        // console.log(`Processing object layer: ${(layer as any).name} `);
 
         // Check layer-level collision property
         const layerHasCollision = layer.properties?.some(
-          (prop:any) => prop.name === "collision" && prop.value === true
+          (prop: any) => prop.name === "collision" && prop.value === true
         );
 
         // Check if this is a known collision layer
@@ -123,7 +130,7 @@ const Player = ({
           "objectscollide",
           "genericobjectscollide",
         ].some((keyword) => layer.name.toLowerCase().includes(keyword));
-        console.log(layerHasCollision, isKnownCollisionLayer)
+        // console.log(layerHasCollision, isKnownCollisionLayer);
         layer.objects.forEach((obj) => {
           // Check object-level collision property
           const objectHasCollision = obj.properties?.some(
@@ -144,7 +151,7 @@ const Player = ({
               (obj.x + (obj.width || mapData.tilewidth) - 1) / mapData.tilewidth
             );
             const objBottom = Math.floor((obj.y - 1) / mapData.tileheight);
-            console.log(objBottom, objLeft, objRight, objTop);
+            // console.log(objBottom, objLeft, objRight, objTop);
             // Mark all tiles this object occupies as collision
             for (
               let tileY = Math.max(0, objTop);
@@ -157,9 +164,9 @@ const Player = ({
                 tileX++
               ) {
                 map.tiles[tileY][tileX] = true;
-                console.log(
-                  `Object collision at ${tileX},${tileY} from ${layer.name} object`
-                );
+                // console.log(
+                //   `Object collision at ${tileX},${tileY} from ${layer.name} object`
+                // );
               }
             }
           }
@@ -179,7 +186,7 @@ const Player = ({
       }
     }
 
-    console.log("Collision map built:", map);
+    // console.log("Collision map built:", map);
     setCollisionMap(map);
   }, [mapData]);
 
@@ -293,9 +300,9 @@ const Player = ({
       // Check if the new position is valid
       if (isValidPosition(newX, newY)) {
         updatePosition({ x: newX, y: newY });
-        console.log(`Player moved to ${newX}, ${newY}`);
+        // console.log(`Player moved to ${newX}, ${newY}`);
       } else {
-        console.log(`Movement blocked to ${newX}, ${newY}`);
+        // console.log(`Movement blocked to ${newX}, ${newY}`);
 
         // Optional: Play collision sound or effect here
         // You could also implement sliding along walls here
@@ -307,54 +314,54 @@ const Player = ({
   }, [playerPosition, isValidPosition, updatePosition]);
 
   // Debug: Render collision map (optional - remove in production)
-  useEffect(() => {
-    if (!ctx || !collisionMap || !mapData) return;
+  // useEffect(() => {
+  //   if (!ctx || !collisionMap || !mapData) return;
 
-    // You can enable this for debugging by uncommenting
-    /*
-    const debugCanvas = document.createElement('canvas');
-    debugCanvas.width = collisionMap.width * 2;
-    debugCanvas.height = collisionMap.height * 2;
-    const debugCtx = debugCanvas.getContext('2d');
+  //   // You can enable this for debugging by uncommenting
+  //   /*
+  //   const debugCanvas = document.createElement('canvas');
+  //   debugCanvas.width = collisionMap.width * 2;
+  //   debugCanvas.height = collisionMap.height * 2;
+  //   const debugCtx = debugCanvas.getContext('2d');
     
-    if (debugCtx) {
-      for (let y = 0; y < collisionMap.height; y++) {
-        for (let x = 0; x < collisionMap.width; x++) {
-          if (collisionMap.tiles[y][x]) {
-            debugCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-            debugCtx.fillRect(x * 2, y * 2, 2, 2);
-          }
-        }
-      }
+  //   if (debugCtx) {
+  //     for (let y = 0; y < collisionMap.height; y++) {
+  //       for (let x = 0; x < collisionMap.width; x++) {
+  //         if (collisionMap.tiles[y][x]) {
+  //           debugCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+  //           debugCtx.fillRect(x * 2, y * 2, 2, 2);
+  //         }
+  //       }
+  //     }
       
-      // Add debug canvas to DOM temporarily
-      debugCanvas.style.position = 'absolute';
-      debugCanvas.style.top = '0';
-      debugCanvas.style.left = '0';
-      debugCanvas.style.zIndex = '1000';
-      debugCanvas.style.border = '1px solid red';
-      document.body.appendChild(debugCanvas);
+  //     // Add debug canvas to DOM temporarily
+  //     debugCanvas.style.position = 'absolute';
+  //     debugCanvas.style.top = '0';
+  //     debugCanvas.style.left = '0';
+  //     debugCanvas.style.zIndex = '1000';
+  //     debugCanvas.style.border = '1px solid red';
+  //     document.body.appendChild(debugCanvas);
       
-      setTimeout(() => {
-        document.body.removeChild(debugCanvas);
-      }, 5000);
-    }
-    */
-  }, [collisionMap, ctx, mapData]);
+  //     setTimeout(() => {
+  //       document.body.removeChild(debugCanvas);
+  //     }, 5000);
+  //   }
+  //   */
+  // }, [collisionMap, ctx, mapData]);
 
   // Draw player (if not using external rendering)
-  useEffect(() => {
-    if (!ctx || !playerImage || onPositionChange) return;
+  // useEffect(() => {
+  //   if (!ctx || !playerImage || onPositionChange) return;
 
-    // This is handled by parent component in your setup
-    ctx.drawImage(
-      playerImage,
-      playerPosition.x * tilesize,
-      playerPosition.y * tilesize,
-      tilesize,
-      tilesize
-    );
-  }, [ctx, playerImage, playerPosition, tilesize, onPositionChange]);
+  //   // This is handled by parent component in your setup
+  //   ctx.drawImage(
+  //     playerImage,
+  //     playerPosition.x * tilesize,
+  //     playerPosition.y * tilesize,
+  //     tilesize,
+  //     tilesize
+  //   );
+  // }, [ctx, playerImage, playerPosition, tilesize, onPositionChange]);
 
   return null;
 };
