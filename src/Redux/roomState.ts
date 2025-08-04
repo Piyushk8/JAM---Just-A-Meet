@@ -212,9 +212,12 @@ const livekitSlice = createSlice({
     updateUsersInRoom: (state, action: PayloadAction<Partial<User>[]>) => {
       for (const player of action.payload) {
         if (!player.id) continue;
+
         const existing = state.usersInRoom[player.id];
-        if (!existing) continue;
-        state.usersInRoom[player.id] = { ...existing, ...player };
+        state.usersInRoom[player.id] = {
+          ...existing,
+          ...player,
+        };
       }
     },
     removeFromUsersInRoom: (state, action: PayloadAction<string>) => {

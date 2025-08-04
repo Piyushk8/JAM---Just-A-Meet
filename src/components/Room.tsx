@@ -82,26 +82,21 @@ export default function PhaserRoom() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Define all event handlers
+    const handleRoomUsers = (roomUsers: User[]) => {
+      dispatch(updateUsersInRoom(roomUsers));
+    };
     const handleConnect = () => {
       console.log("Connected to server with socket ID:", socket.id);
     };
-
     const handleUserJoined = (user: User) => {
-      console.log("hereeeeeeeeeeeeeeeeeeeeeeeeee", user);
       if (user.id !== socket.id) {
-        console.log("joined✅", user);
         dispatch(addUserInRoom({ userId: user.id, user }));
       }
     };
-
     const handleUserLeft = (userId: string) => {
-      console.log("hereeeeeeeeeeeeeeeeeeeeeeeeeebyeeeeeeeee", userId);
-      console.log("left❌", userId);
       dispatch(removeFromUsersInRoom(userId));
       dispatch(updateNearbyParticipants({ left: [userId], joined: null }));
     };
-
     const handleRoomSync = (payload: RoomSyncPayload) => {
       const { me, players, proximity, audio } = payload;
       dispatch(updateCurrentUser(me));
@@ -155,7 +150,6 @@ export default function PhaserRoom() {
         return newTyping;
       });
     };
-
     socket.on("connect", handleConnect);
     socket.on("user-joined", handleUserJoined);
     socket.on("user-left", handleUserLeft);
@@ -258,8 +252,7 @@ export default function PhaserRoom() {
       </div>
 
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
-      <Canvas
-      />
+      <Canvas />
 
       {/* Chat Panel */}
       {showChat && (

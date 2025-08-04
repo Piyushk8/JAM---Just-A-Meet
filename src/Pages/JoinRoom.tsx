@@ -64,8 +64,8 @@ export const JoinRoom = () => {
                 setCurrentUser({
                   id: socket.id,
                   username,
-                  x: Math.random() * 0,
-                  y: Math.random() * 0,
+                  x: 22,
+                  y: 10,
                   socketId: socket.id,
                   roomId: roomId,
                   isAudioEnabled: false,

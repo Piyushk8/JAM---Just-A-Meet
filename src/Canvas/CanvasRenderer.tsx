@@ -24,15 +24,15 @@ export default function CanvasRenderer({
     (state: RootState) => state.roomState
   );
   const dispatch = useDispatch();
-
+  console.log("usersINroom",usersInRoom)
   // Initialize user if not exists - with TILE coordinates
   useEffect(() => {
     if (!currentUser) {
       console.log('🚀 Initializing user with default tile position');
       dispatch(updateCurrentUser({
         id: 'user-' + Math.random().toString(36).substr(2, 9),
-        x: 5, // TILE coordinates, not pixels -- major mistake in past!!!!
-        y: 5, // TILE coordinates, not pixels
+        x: 22, // TILE coordinates, not pixels -- major mistake in past!!!!
+        y: 10, // TILE coordinates, not pixels
       }));
     }
   }, [currentUser, dispatch]);
@@ -140,7 +140,7 @@ export default function CanvasRenderer({
       // Convert tile coordinates to pixel coordinates for rendering
       const pixelPos = tileToPixel(tilePos);
 
-      console.log('🎨 Rendering player at tile:', tilePos, 'pixel:', pixelPos);
+      // console.log('🎨 Rendering player at tile:', tilePos, 'pixel:', pixelPos);
 
       // Draw player at pixel position
       ctx.drawImage(
@@ -151,7 +151,7 @@ export default function CanvasRenderer({
         TILE_SIZE
       );
     },
-    [characters]
+    [characters,usersInRoom]
   );
 
   // Main render loop
@@ -204,7 +204,7 @@ export default function CanvasRenderer({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [mapData, tilesetImages, render, renderBackground]);
+  }, [mapData, tilesetImages, render, renderBackground,usersInRoom]);
 
   return (
     <div className="relative" style={{ backgroundColor: "black" }}>
