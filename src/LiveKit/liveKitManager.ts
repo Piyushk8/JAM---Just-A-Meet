@@ -35,10 +35,9 @@ export class LiveKitManager {
       },
     });
 
-    // (optional) warm up the connection early
+    //warming up the connection early
     this.room.prepareConnection(url, token);
 
-    // wire events
     this.room
       .on(RoomEvent.TrackSubscribed, this.handleTrackSubscribed)
       .on(RoomEvent.ParticipantConnected, this.handleParticipantConnected)
@@ -84,7 +83,6 @@ export class LiveKitManager {
     // publish local media
     const p = this.room.localParticipant;
     if (enableVideo || enableAudio) {
-      // you can also do: await this.room.localParticipant.enableCameraAndMicrophone();
       if (enableVideo) await p.setCameraEnabled(true);
       if (enableAudio) await p.setMicrophoneEnabled(true);
     }
@@ -118,16 +116,16 @@ export class LiveKitManager {
     for (const p of left) this.unSubscribeIdentity(p);
   }
 
+  //  This first checks for identity in the room in case it has not joined in and sends to pending queue 
   private subscribeIdentity(identity: string) {
     if (!this.room || !identity) return;
     if (this.subscribedToTrackIDs.has(identity)) return;
-    // look for the identity in room incase it has not joined the room yet it will be sent to pending
     const p = this.findRemote(identity);
     if (!p) {
       this.pendingToSubscribeToTrackIDs.add(identity);
       return;
     }
-
+    
     //gets the Track Publications (audio,video etc) and attach the subscription to all of them
     p.getTrackPublications().forEach((pub) => {
       (pub as RemoteTrackPublication).setSubscribed(true);
@@ -135,6 +133,7 @@ export class LiveKitManager {
     // adds to subscription set for tracking
     this.subscribedToTrackIDs.add(identity);
   }
+  //  This first checks for identity in the room in case it has not joined in and sends to pending queue 
   private unSubscribeIdentity(identity: string) {
     if (!this.room || !identity) return;
     if (!this.subscribedToTrackIDs.has(identity)) return;
@@ -149,6 +148,7 @@ export class LiveKitManager {
     this.subscribedToTrackIDs.delete(identity);
   }
 
+  // just llooks for users(remote) in the room
   private findRemote(identity: string): RemoteParticipant | undefined {
     if (!this.room || !identity) return; // Only return if room or identity is missing
 
@@ -161,6 +161,7 @@ export class LiveKitManager {
   }
 
   // ---- event handlers ----
+  //  This subs to users who are now connected to us first checks the pending queue and subs then delete from the queue
   private handleParticipantConnected(p: RemoteParticipant) {
     if (!this.room) return;
 
@@ -172,13 +173,14 @@ export class LiveKitManager {
       this.pendingToSubscribeToTrackIDs.delete(p.identity);
     }
   }
+  // this allows us to attach the video and audio components to our screen 
   private handleTrackSubscribed = (
     track: RemoteTrack,
     publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ) => {
     if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
-      const el = track.attach(); // creates <video>/<audio> for you
+      const el = track.attach();
       document.getElementById("livekit-container")?.appendChild(el);
     }
   };
@@ -209,7 +211,6 @@ export class LiveKitManager {
   private handleAudioPlaybackStatusChanged = () => {
     if (!this.room) return;
     if (!this.room.canPlaybackAudio) {
-      // Must call startAudio() from a user gesture
       const btn = document.createElement("button");
       btn.textContent = "Click to enable audio";
       btn.onclick = () => this.room?.startAudio().then(() => btn.remove());

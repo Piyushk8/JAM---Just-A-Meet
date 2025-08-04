@@ -132,11 +132,11 @@ import type { User } from "../types/types";
 
 interface RoomState {
   currentUser: User | null;
-  nearbyParticipants: string[]; // Use array instead of Set
+  nearbyParticipants: string[];
   isAudioEnabled: boolean;
   isVideoEnabled: boolean;
   roomId: string | null;
-  usersInRoom: Record<string, User>; // Use object instead of Map
+  usersInRoom: Record<string, User>;
 }
 
 const initialState: RoomState = {
@@ -146,6 +146,24 @@ const initialState: RoomState = {
   isVideoEnabled: false,
   roomId: null,
   usersInRoom: {
+    // user1: {
+    //   id: "user1",
+    //   username: "piyush",
+    //   x: 0,
+    //   y: 0,
+    //   socketId: "",
+    //   roomId: "room1",
+    //   sprite: "",
+    // },
+    // user2: {
+    //   id: "user2",
+    //   username: "alex",
+    //   x: 5,
+    //   y: 5,
+    //   socketId: "",
+    //   roomId: "room1",
+    //   sprite: "",
+    // },
   },
 };
 

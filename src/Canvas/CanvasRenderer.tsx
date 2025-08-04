@@ -1,17 +1,12 @@
-// components/CanvasRenderer.tsx - Updated version
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { TiledMap } from "../types/canvas";
 import { findTilesetForGID } from "../lib/helper";
 import Player from "./Player";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
-import {
-  addUserInRoom,
-  setCurrentUser,
-  updateCurrentUser,
-} from "../Redux/roomState";
+import { updateCurrentUser } from "../Redux/roomState";
 import type { User } from "../types/types";
-const TILE_SIZE = 32;
+import { tileToPixel, ensureTilePosition, TILE_SIZE } from "../lib/utils"
 
 export default function CanvasRenderer({
   mapData,
@@ -28,33 +23,25 @@ export default function CanvasRenderer({
   const { currentUser, usersInRoom } = useSelector(
     (state: RootState) => state.roomState
   );
-  // const userId = crypto.randomUUID();
-  // const dispatch = useDispatch();
-  // dispatch(
-  //   addUserInRoom({
-  //     user: {
-  //       id: userId,
-  //       username: "kartik",
-  //       x: 1,
-  //       y: 1,
-  //       socketId: "",
-  //       roomId: "room1",
-  //       sprite: "",
-  //     },
-  //     userId: userId,
-  //   })
-  // );
-  console.log(
-    "canvas rebder",
-    currentUser,
-    mapData.height,
-    usersInRoom
-  );
+  const dispatch = useDispatch();
+
+  // Initialize user if not exists - with TILE coordinates
+  useEffect(() => {
+    if (!currentUser) {
+      console.log('🚀 Initializing user with default tile position');
+      dispatch(updateCurrentUser({
+        id: 'user-' + Math.random().toString(36).substr(2, 9),
+        x: 5, // TILE coordinates, not pixels -- major mistake in past!!!!
+        y: 5, // TILE coordinates, not pixels
+      }));
+    }
+  }, [currentUser, dispatch]);
+
   if (!currentUser) {
-    return;
+    return <div>Initializing player...</div>;
   }
 
-  // Render the background once (static elements)
+  // Render the background
   const renderBackground = useCallback(() => {
     if (
       !mapData ||
@@ -76,7 +63,7 @@ export default function CanvasRenderer({
 
     // Render all layers except collision-only layers
     mapData.layers.forEach((layer) => {
-      // Skip pure collision layers (no visual representation)
+      // Skip pure collision layers
       const isCollisionOnly =
         layer.name.toLowerCase().includes("collision") &&
         !layer.name.toLowerCase().includes("visual");
@@ -111,10 +98,7 @@ export default function CanvasRenderer({
         });
       }
 
-      if (
-        layer.type === "objectgroup" &&
-        Array.isArray((layer as any).objects)
-      ) {
+      if (layer.type === "objectgroup" && Array.isArray((layer as any).objects)) {
         (layer as any).objects.forEach((obj: any) => {
           const gid = obj.gid;
           if (!gid) return;
@@ -145,59 +129,56 @@ export default function CanvasRenderer({
     });
   }, [mapData, tilesetImages]);
 
-  // Render the player on the main canvas
+  //converts tile coordinates to pixel coordinates for drawing
   const renderPlayer = useCallback(
     (ctx: CanvasRenderingContext2D, player: User) => {
-      // console.log(characters[0], player);
       if (!characters[0] || !player) return;
 
-      // Clear the main canvas
-      // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      // Ensure we have tile coordinates
+      const tilePos = ensureTilePosition({ x: player.x, y: player.y });
+      
+      // Convert tile coordinates to pixel coordinates for rendering
+      const pixelPos = tileToPixel(tilePos);
 
-      // // Draw background
-      // if (backgroundCanvasRef.current) {
-      //   ctx.drawImage(backgroundCanvasRef.current, 0, 0);
-      // }
+      console.log('🎨 Rendering player at tile:', tilePos, 'pixel:', pixelPos);
 
-      // Draw player
+      // Draw player at pixel position
       ctx.drawImage(
         characters[0],
-        player.x * TILE_SIZE,
-        player.y * TILE_SIZE,
+        pixelPos.x,
+        pixelPos.y,
         TILE_SIZE,
         TILE_SIZE
       );
     },
-    [characters, currentUser.x, currentUser.y]
+    [characters]
   );
 
   // Main render loop
   const render = useCallback(() => {
     const canvas = canvasRef.current;
-    // console.log("canvas", canvas?.height);
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background
     if (backgroundCanvasRef.current) {
       ctx.drawImage(backgroundCanvasRef.current, 0, 0);
     }
 
     // Draw all players
-    // [currentUser, ...usersInRoom.values()].forEach((player) => {
-    //   renderPlayer(ctx, player);
-    // });
     [currentUser, ...Object.values(usersInRoom)].forEach((player) => {
       renderPlayer(ctx, player);
     });
 
     // Continue the render loop
     animationFrameRef.current = requestAnimationFrame(render);
-  }, [renderPlayer]);
+  }, [currentUser, usersInRoom, renderPlayer]);
 
-  // Initialize canvases and start render loop
+  // Initializes canvases and start render loop
   useEffect(() => {
     if (
       !mapData ||
@@ -211,17 +192,13 @@ export default function CanvasRenderer({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set main canvas size
     canvas.width = mapData.width * mapData.tilewidth;
     canvas.height = mapData.height * mapData.tileheight;
 
-    // Render background once
     renderBackground();
 
-    // Start render loop
     render();
 
-    // Cleanup
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -232,14 +209,11 @@ export default function CanvasRenderer({
   return (
     <div className="relative" style={{ backgroundColor: "black" }}>
       <div className="flex h-14 w-lg shadow-2xl ring-1 ring-offset-white rounded-b-lg sticky top-2 left-1/2 transform -translate-x-1/2 z-10 text-red-300">
-        video section
-        <video src="" />
-        <img
-          className="bg-green-200"
-          src="\assets\character\single\Adam_idle_anim_1.png"
-          alt=""
-        />
+        <div className="bg-gray-800 px-4 py-2 rounded text-white">
+          Player Position: Tile ({currentUser.x}, {currentUser.y})
+        </div>
       </div>
+      
       <div className="h-95vh bg-sky-300">
         {/* Hidden background canvas */}
         <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />

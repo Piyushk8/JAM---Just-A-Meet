@@ -63,13 +63,10 @@ export default function PhaserRoom() {
     new Map()
   );
   const [showChat, setShowChat] = useState(false);
-  // const [isAudioEnabled, setIsAudioEnabled] = useState(false);
-  // const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [connectedPeers, setConnectedPeers] = useState<number>(0); // just number of nearby users
   const [liveKitManager, setLiveKitManager] = useState<LiveKitManager>(
     new LiveKitManager()
   );
-
   const roomRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -242,36 +239,6 @@ export default function PhaserRoom() {
       typingTimeoutRef.current = null;
     }
   };
-
-  // if (!isJoined) {
-  //   return (
-  //     <div className="login-container">
-  //       <div className="login-form">
-  //         <h1>Join Virtual Office</h1>
-  //         <input
-  //           type="text"
-  //           placeholder="Enter your name"
-  //           value={username}
-  //           onChange={(e) => setUsername(e.target.value)}
-  //           onKeyDown={(e) => e.key === "Enter" && joinRoom()}
-  //         />
-  //         <input
-  //           type="text"
-  //           placeholder="Room ID"
-  //           value={roomId}
-  //           onChange={(e) => setRoomId(e.target.value)}
-  //         />
-  //         <button onClick={joinRoom} disabled={!username.trim()}>
-  //           Join Room
-  //         </button>
-  //         <p className="privacy-notice">
-  //           📱 Audio access will be requested for voice chat
-  //         </p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   return (
     <div className="relative">
       {/* Media Controls */}
@@ -292,12 +259,6 @@ export default function PhaserRoom() {
 
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
       <Canvas
-      // currentUser={currentUser}
-      // users={users}
-      // nearbyUsers={nearbyUsers}
-      // showVideo={isVideoEnabled}
-      // showAudio={isAudioEnabled}
-      // roomId={roomId}
       />
 
       {/* Chat Panel */}

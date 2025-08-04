@@ -11,6 +11,7 @@ import {
 } from "../Redux/roomState";
 import { useDispatch } from "react-redux";
 import { useSocket } from "../SocketProvider";
+import { LIVEKIT_URL } from "../lib/consts";
 interface User {
   id: string;
   username: string;
@@ -21,41 +22,11 @@ interface User {
   isVideoEnabled?: boolean;
 }
 
-interface ChatMessage {
-  id: string;
-  userId: string;
-  username: string;
-  message: string;
-  type: string;
-  timestamp: string;
-  x: number;
-  y: number;
-  distance?: number;
-}
-
-interface TypingUser {
-  userId: string;
-  username: string;
-  isTyping: boolean;
-}
-
-const ROOM_WIDTH = 1200;
-const ROOM_HEIGHT = 800;
-// worldState.ts
-type RemotePlayer = {
-  id: string;
-  x: number;
-  y: number;
-  lastSeen: number;
-  prevX: number;
-  prevY: number;
-};
 
 export const JoinRoom = () => {
   const socket = useSocket();
   const [username, setUsername] = useState(""); // my usernmae
   const [roomId, setRoomId] = useState("room1");
-  const [isJoined, setIsJoined] = useState(true);
   const [liveKitManager, setLiveKitManager] = useState<LiveKitManager>(
     new LiveKitManager()
   );
@@ -86,7 +57,6 @@ export const JoinRoom = () => {
             if (!res || !res.success) {
               console.log("Error in joining room");
             } else {
-              console.log(roomId, username);
               // setting users starting location and adding it to a room
               // getting access token to access the livekit server and rooms
               if (!socket.id) return;
@@ -106,12 +76,9 @@ export const JoinRoom = () => {
               if (!socket.id) return;
               const token = await fetchLiveKitToken(socket.id, roomId);
 
-              // // ✅ one-time call
-
-              console.log("join token", token);
               try {
                 const room = await liveKitManager?.join({
-                  url: "wss://virtualoffice-r2209kci.livekit.cloud",
+                  url: LIVEKIT_URL,
                   token,
                   // url: "ws://localhost:7880",
                   enableAudio: true,

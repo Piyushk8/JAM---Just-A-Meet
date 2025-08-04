@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import CanvasRenderer from "./CanvasRenderer";
 import type { TiledMap } from "../types/canvas";
 
@@ -10,16 +10,16 @@ export default function Canvas() {
   >({});
   const [characters, setCharacters] = useState<HTMLImageElement[] | null>();
 
+  //This loads map data
   useEffect(() => {
-    // Load the map JSON
     fetch(`${"http://localhost:5173"}/assets/map/map.json`)
       .then((res) =>{
-        // console.log(res.json())
         return res.json()})
       .then(setMapData);
 
-    // Load the image ONCE using ref
   }, []);
+
+  // this loads tiledsets
   useEffect(() => {
     if (!mapData) return;
 
@@ -38,8 +38,6 @@ export default function Canvas() {
         }
 
         if (!img) continue;
-
-        // ✅ Store with just the filename as key
         const filename = ts.image.split("/").pop();
         if (filename) loadedImages[filename] = img;
       }
@@ -52,6 +50,7 @@ export default function Canvas() {
     setTilesetLoaded(true);
   }, [mapData]);
 
+  // this loads character sprites
   useEffect(() => {
     const loadCharacters = async () => {
       let LoadedCharacters = [];
@@ -59,7 +58,6 @@ export default function Canvas() {
       for (let c of chars) {
         let playerImgPath = `/assets/character/single/${c}_idle_anim_12.png`;
         const loadedImage = await getImage(playerImgPath);
-        // console.log(loadedImage);
         if (loadedImage) {
           LoadedCharacters.push(loadedImage);
         }
@@ -68,7 +66,6 @@ export default function Canvas() {
     };
     loadCharacters();
   }, []);
-  // console.log(mapData)
   return (
     <>
       {mapData && Object.keys(tilesetImages).length > 0 && characters && (
@@ -87,7 +84,7 @@ async function getImage(imagePath: string): Promise<HTMLImageElement | null> {
   // console.log(imagePath, img);
   const loadedImage = await new Promise<boolean>((resolve) => {
     img.onload = () => resolve(true);
-    img.onerror = () => resolve(false); // ✅ no rejection
+    img.onerror = () => resolve(false);
   });
 
   return loadedImage ? img : null;
