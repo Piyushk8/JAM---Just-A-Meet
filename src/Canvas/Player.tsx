@@ -1,9 +1,25 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { ObjectLayer, TiledMap, TileLayer } from "../types/canvas";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { updateCurrentUser } from "../Redux/roomState";
 import { ensureTilePosition, type TilePosition } from "../lib/utils";
 import { useSocket } from "../SocketProvider";
+import type {
+  InteractableObject,
+  InteractablesMap,
+} from "../Interactables/coreDS";
+import type {
+  InteractionEvent,
+  InteractionManager as InteractionManagerType,
+} from "../Interactables/manager";
+import { InteractionManager } from "../Interactables/manager";
+import { InteractablesMapBuilder } from "../Interactables/mapBuilder";
+import type { RootState } from "../Redux";
+import {
+  setAvailableInteractions,
+  setClosestInteraction,
+} from "../Redux/interactionState";
+import { dispatchInteractable, dispatchInteractables } from "../lib/helper";
 
 type Props = {
   mapData: TiledMap;
@@ -12,6 +28,7 @@ type Props = {
   playerImage: HTMLImageElement | null;
   playerPosition?: { x: number; y: number };
   onPositionChange?: (position: { x: number; y: number }) => void;
+  onInteraction: (event: InteractionEvent) => void;
 };
 
 interface CollisionMap {
@@ -27,10 +44,18 @@ const Player = ({
   playerImage,
   playerPosition: externalPosition,
   onPositionChange,
+  onInteraction,
 }: Props) => {
   const [collisionMap, setCollisionMap] = useState<CollisionMap | null>(null);
   const dispatch = useDispatch();
   const socket = useSocket();
+
+  const [interactablesMap, setInteractablesMap] =
+    useState<InteractablesMap | null>(null);
+  const { availableInteractions, closestInteraction } = useSelector(
+    (state: RootState) => state.interactionState
+  );
+  const interactionManagerRef = useRef<InteractionManagerType | null>(null);
 
   // Major mistake in past!!!: Always ensure we're working with tile coordinates
   const playerPosition = externalPosition || { x: 22, y: 10 };
@@ -48,6 +73,10 @@ const Player = ({
 
       console.log("📍 Updating player position to tile:", tilePos);
       dispatch(updateCurrentUser(tilePos));
+
+      if (interactionManagerRef.current) {
+        interactionManagerRef.current.updateInteractions(tilePos);
+      }
     },
     [dispatch]
   );
@@ -63,6 +92,10 @@ const Player = ({
         .fill(null)
         .map(() => Array(mapData.width).fill(false)),
     };
+
+    const interactables =
+      InteractablesMapBuilder.buildInteractablesMap(mapData);
+    setInteractablesMap(interactables);
 
     // Process all layers for collision detection
     mapData.layers.forEach((layer) => {
@@ -177,6 +210,60 @@ const Player = ({
     setCollisionMap(map);
   }, [mapData]);
 
+  useEffect(() => {
+    if (!interactablesMap) return;
+
+    const manager = new InteractionManager(interactablesMap);
+    interactionManagerRef.current = manager;
+
+    // Subscribe to interaction events
+    const unsubscribe = manager.subscribe((event: InteractionEvent) => {
+      switch (event.type) {
+        case "available":
+          console.log(
+            "✨ Interaction available:",
+            event.object?.type,
+            event.objectId,
+            event.position
+          );
+          dispatchInteractables(dispatch, manager.getAvailableInteractions());
+          dispatchInteractable(
+            dispatch,
+            manager.getClosestInteraction(playerPosition)
+          );
+          break;
+
+        case "lost":
+          console.log("❌ Interaction lost:", event.objectId);
+          dispatchInteractables(dispatch, manager.getAvailableInteractions());
+          dispatchInteractable(
+            dispatch,
+            manager.getClosestInteraction(playerPosition)
+          );
+          break;
+
+        case "triggered":
+          console.log(
+            "🎯 Interaction triggered:",
+            event.object?.type,
+            event.objectId
+          );
+          if (event.object && onInteraction) {
+            onInteraction(event);
+          }
+          break;
+      }
+    });
+
+    // Initial interaction check
+    manager.updateInteractions(playerPosition);
+
+    return () => {
+      unsubscribe();
+      manager.cleanup();
+    };
+  }, [interactablesMap, playerPosition, onInteraction]);
+
   const isValidPosition = useCallback(
     (tilePos: TilePosition): boolean => {
       if (!collisionMap) return false;
@@ -248,6 +335,17 @@ const Player = ({
     if (!collisionMap) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "e" || e.key === "E" || e.key === " ") {
+        e.preventDefault();
+        console.log("clicked.................................");
+        if (interactionManagerRef.current && closestInteraction) {
+          interactionManagerRef.current.triggerInteraction(
+            closestInteraction.id
+          );
+        }
+        return;
+      }
+
       if (
         [
           "ArrowUp",
@@ -301,7 +399,13 @@ const Player = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [playerPosition, isValidPosition, updatePosition, collisionMap]);
+  }, [
+    playerPosition,
+    isValidPosition,
+    updatePosition,
+    collisionMap,
+    closestInteraction,
+  ]);
 
   return null;
 };

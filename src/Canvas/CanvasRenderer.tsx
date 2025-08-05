@@ -1,12 +1,14 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { TiledMap } from "../types/canvas";
-import { findTilesetForGID } from "../lib/helper";
+import { findTilesetForGID, getInteractionLabelPosition } from "../lib/helper";
 import Player from "./Player";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
 import { updateCurrentUser } from "../Redux/roomState";
 import type { User } from "../types/types";
-import { tileToPixel, ensureTilePosition, TILE_SIZE } from "../lib/utils"
+import { tileToPixel, ensureTilePosition, TILE_SIZE } from "../lib/utils";
+import Computer from "./InteractionHandlers/Computer";
+import { onInteractionHandler } from "./InteractionHandlers";
 
 export default function CanvasRenderer({
   mapData,
@@ -23,17 +25,25 @@ export default function CanvasRenderer({
   const { currentUser, usersInRoom } = useSelector(
     (state: RootState) => state.roomState
   );
+  const { availableInteractions, closestInteraction } = useSelector(
+    (state: RootState) => state.interactionState
+  );
+  const { isComputer, isVendingMachineOpen, isWhiteBoardOpen } = useSelector(
+    (state: RootState) => state.miscSlice
+  );
   const dispatch = useDispatch();
-  console.log("usersINroom",usersInRoom)
+  console.log("usersINroom", usersInRoom);
   // Initialize user if not exists - with TILE coordinates
   useEffect(() => {
     if (!currentUser) {
-      console.log('🚀 Initializing user with default tile position');
-      dispatch(updateCurrentUser({
-        id: 'user-' + Math.random().toString(36).substr(2, 9),
-        x: 22, // TILE coordinates, not pixels -- major mistake in past!!!!
-        y: 10, // TILE coordinates, not pixels
-      }));
+      console.log("🚀 Initializing user with default tile position");
+      dispatch(
+        updateCurrentUser({
+          id: "user-" + Math.random().toString(36).substr(2, 9),
+          x: 22, // TILE coordinates, not pixels -- major mistake in past!!!!
+          y: 10, // TILE coordinates, not pixels
+        })
+      );
     }
   }, [currentUser, dispatch]);
 
@@ -98,7 +108,10 @@ export default function CanvasRenderer({
         });
       }
 
-      if (layer.type === "objectgroup" && Array.isArray((layer as any).objects)) {
+      if (
+        layer.type === "objectgroup" &&
+        Array.isArray((layer as any).objects)
+      ) {
         (layer as any).objects.forEach((obj: any) => {
           const gid = obj.gid;
           if (!gid) return;
@@ -136,7 +149,7 @@ export default function CanvasRenderer({
 
       // Ensure we have tile coordinates
       const tilePos = ensureTilePosition({ x: player.x, y: player.y });
-      
+
       // Convert tile coordinates to pixel coordinates for rendering
       const pixelPos = tileToPixel(tilePos);
 
@@ -151,7 +164,7 @@ export default function CanvasRenderer({
         TILE_SIZE
       );
     },
-    [characters,usersInRoom]
+    [characters, usersInRoom]
   );
 
   // Main render loop
@@ -163,7 +176,7 @@ export default function CanvasRenderer({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw background
     if (backgroundCanvasRef.current) {
       ctx.drawImage(backgroundCanvasRef.current, 0, 0);
@@ -204,7 +217,7 @@ export default function CanvasRenderer({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [mapData, tilesetImages, render, renderBackground,usersInRoom]);
+  }, [mapData, tilesetImages, render, renderBackground, usersInRoom]);
 
   return (
     <div className="relative" style={{ backgroundColor: "black" }}>
@@ -213,7 +226,41 @@ export default function CanvasRenderer({
           Player Position: Tile ({currentUser.x}, {currentUser.y})
         </div>
       </div>
-      
+      {closestInteraction && (
+        <div
+          style={{
+            position: "absolute",
+            left: getInteractionLabelPosition(closestInteraction).x -30,
+            bottom: getInteractionLabelPosition(closestInteraction).y,
+            transform: "translate(-50%, -100%)", // center horizontally, place above
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            borderRadius: "4px",
+            fontSize: "12px",
+          }}
+          className="font-mono text-balance px-2 py-1 mb-3"
+        >
+          Press E
+        </div>
+      )}
+      {isComputer && closestInteraction && (
+        <div
+          style={{
+            position: "absolute",
+            left: getInteractionLabelPosition(closestInteraction).x,
+            top: getInteractionLabelPosition(closestInteraction).y,
+            transform: "translate(-50%, -100%)", // center horizontally, place above
+            background: "rgba(0,0,0,0.7)",
+            color: "#fff",
+            padding: "2px 6px",
+            borderRadius: "4px",
+            fontSize: "12px",
+          }}
+          className="font-mono"
+        >
+          Press E
+        </div>
+      )}
       <div className="h-95vh bg-sky-300">
         {/* Hidden background canvas */}
         <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />
@@ -235,6 +282,7 @@ export default function CanvasRenderer({
           tilesize={TILE_SIZE}
           playerImage={characters[0]}
           playerPosition={{ x: currentUser.x, y: currentUser.y }}
+          onInteraction={onInteractionHandler}
         />
       </div>
     </div>
