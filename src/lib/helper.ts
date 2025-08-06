@@ -12,6 +12,8 @@ export function findTilesetForGID(gid: number, tilesets: any[]) {
   throw new Error("No tileset found for gid: " + gid);
 }
 
+
+// this is helper function to make the interactions with tiles of types set to array for redux storage
 export type serializedInteractableType = Omit<InteractableObject, "tiles"> & {
   tiles: string[];
 };
@@ -30,7 +32,7 @@ export const dispatchInteractable = (
   dispatch: AppDispatch,
   obj: InteractableObject | null
 ) => {
-  obj ? dispatch(setClosestInteraction(serializeInteractable(obj))) : null;
+  dispatch(setClosestInteraction(obj ? serializeInteractable(obj) : null));
 };
 export const dispatchInteractables = (
   dispatch: AppDispatch,
@@ -43,10 +45,11 @@ export const dispatchInteractables = (
   );
 };
 
-
 const TILE_SIZE = 32;
 
-export function getInteractionLabelPosition(interaction: serializedInteractableType) {
+export function getInteractionLabelPosition(
+  interaction: serializedInteractableType
+) {
   // Either use the center of the bounds:
   const centerX = interaction.bounds.x + interaction.bounds.width / 2;
   const centerY = interaction.bounds.y + interaction.bounds.height / 2;
@@ -56,4 +59,3 @@ export function getInteractionLabelPosition(interaction: serializedInteractableT
     y: (centerY - 1) * TILE_SIZE, // a bit above the object
   };
 }
-

@@ -44,11 +44,9 @@ const livekitSlice = createSlice({
   initialState,
   reducers: {
     setCurrentUser: (state, action: PayloadAction<User>) => {
-      console.log(typeof action.payload)
       state.currentUser = action.payload;
     },
     updateCurrentUser: (state, action: PayloadAction<Partial<User>>) => {
-      console.log(typeof action.payload)
       if (state.currentUser) {
         Object.assign(state.currentUser, action.payload);
       }
@@ -60,14 +58,12 @@ const livekitSlice = createSlice({
       }
     },
     setNearbyParticipants: (state, action: PayloadAction<string[]>) => {
-      console.log(typeof action.payload)
       state.nearbyParticipants = action.payload;
     },
     updateNearbyParticipants: (
       state,
       action: PayloadAction<{ left: string[] | null; joined: string[] | null }>
     ) => {
-       console.log(typeof action.payload)
       const { left, joined } = action.payload;
       const currentSet = new Set(state.nearbyParticipants);
 
@@ -86,8 +82,7 @@ const livekitSlice = createSlice({
       state.nearbyParticipants = Array.from(currentSet);
     },
     updateUsersInRoom: (state, action: PayloadAction<Partial<User>[]>) => {
-       console.log(typeof action.payload)
-      for (const player of action.payload) {
+       for (const player of action.payload) {
         if (!player.id) continue;
 
         const existing = state.usersInRoom[player.id];

@@ -32,7 +32,6 @@ export default function CanvasRenderer({
     (state: RootState) => state.miscSlice
   );
   const dispatch = useDispatch();
-  console.log("usersINroom", usersInRoom);
   // Initialize user if not exists - with TILE coordinates
   useEffect(() => {
     if (!currentUser) {
@@ -183,7 +182,10 @@ export default function CanvasRenderer({
     }
 
     // Draw all players
-    [currentUser, ...Object.values(usersInRoom)].forEach((player) => {
+    [
+      currentUser,
+      ...Object.values(usersInRoom).filter((p) => p.id != currentUser.id),
+    ].forEach((player) => {
       renderPlayer(ctx, player);
     });
 
@@ -230,15 +232,13 @@ export default function CanvasRenderer({
         <div
           style={{
             position: "absolute",
-            left: getInteractionLabelPosition(closestInteraction).x -30,
-            bottom: getInteractionLabelPosition(closestInteraction).y,
-            transform: "translate(-50%, -100%)", // center horizontally, place above
+            left: getInteractionLabelPosition(closestInteraction).x - 30,
+            top: getInteractionLabelPosition(closestInteraction).y + 40,
+            transform: "translate(-10%, 10%)", // center horizontally, place above
             background: "rgba(0,0,0,0.7)",
             color: "#fff",
-            borderRadius: "4px",
-            fontSize: "12px",
           }}
-          className="font-mono text-balance px-2 py-1 mb-3"
+          className="text-xl  font-mono text-balance h-fit text-center flex justify-center items-center w-fit  rounded-xl px-4 py-2 mb-3"
         >
           Press E
         </div>

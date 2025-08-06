@@ -15,10 +15,6 @@ import type {
 import { InteractionManager } from "../Interactables/manager";
 import { InteractablesMapBuilder } from "../Interactables/mapBuilder";
 import type { RootState } from "../Redux";
-import {
-  setAvailableInteractions,
-  setClosestInteraction,
-} from "../Redux/interactionState";
 import { dispatchInteractable, dispatchInteractables } from "../lib/helper";
 
 type Props = {
@@ -57,7 +53,7 @@ const Player = ({
   );
   const interactionManagerRef = useRef<InteractionManagerType | null>(null);
 
-  // Major mistake in past!!!: Always ensure we're working with tile coordinates
+  // Critical dont touch, mistake in past!!!: Always ensure we're working with tile coordinates no pixels 
   const playerPosition = externalPosition || { x: 22, y: 10 };
 
   //   useEffect(() => {
@@ -71,7 +67,7 @@ const Player = ({
     (newPos: TilePosition) => {
       const tilePos = ensureTilePosition(newPos);
 
-      console.log("📍 Updating player position to tile:", tilePos);
+      // console.log("📍 Updating player position to tile:", tilePos);
       dispatch(updateCurrentUser(tilePos));
 
       if (interactionManagerRef.current) {
@@ -234,8 +230,14 @@ const Player = ({
           break;
 
         case "lost":
-          console.log("❌ Interaction lost:", event.objectId);
+          // console.log(
+          //   "❌ Interaction lost:",
+          //   event.objectId,
+          //   manager.getAvailableInteractions(),
+          //   manager.getClosestInteraction(playerPosition)
+          // );
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
+        
           dispatchInteractable(
             dispatch,
             manager.getClosestInteraction(playerPosition)
@@ -243,26 +245,32 @@ const Player = ({
           break;
 
         case "triggered":
-          console.log(
-            "🎯 Interaction triggered:",
-            event.object?.type,
-            event.objectId
-          );
+          // console.log(
+          //   "🎯 Interaction triggered:",
+          //   event.object?.type,
+          //   event.objectId
+          // );
           if (event.object && onInteraction) {
             onInteraction(event);
           }
           break;
       }
     });
-
-    // Initial interaction check
     manager.updateInteractions(playerPosition);
 
     return () => {
       unsubscribe();
       manager.cleanup();
     };
-  }, [interactablesMap, playerPosition, onInteraction]);
+  }, [interactablesMap, onInteraction]);
+
+  // handles interaction checking on each player position in isolated manager
+  useEffect(() => {
+    const manager = interactionManagerRef.current;
+    if (manager) {
+      manager.updateInteractions(playerPosition);
+    }
+  }, [playerPosition]);
 
   const isValidPosition = useCallback(
     (tilePos: TilePosition): boolean => {

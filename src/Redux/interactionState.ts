@@ -16,6 +16,9 @@ const initialState: InteractionState = {
   closestInteraction: null,
 };
 
+// interactions defines all the objects we can interact with and want to show respective interactions response for each 
+// ex- computer on closest if 'triggered' - calls its callbackhandler and opens video call
+
 const interactionState = createSlice({
   name: "interactionStates",
   initialState,
@@ -24,6 +27,7 @@ const interactionState = createSlice({
       state,
       action: PayloadAction<serializedInteractableType[] | null>
     ) => {
+      console.log("here seeting the available",action.payload)
       if (action.payload) {
         state.availableInteractions = action.payload;
       }
@@ -32,9 +36,8 @@ const interactionState = createSlice({
       state,
       action: PayloadAction<serializedInteractableType | null>
     ) => {
-      if (action.payload) {
-        state.closestInteraction = action.payload;
-      }
+      console.log("here seeting the closest",action.payload)
+      state.closestInteraction = action.payload;
     },
   },
 });

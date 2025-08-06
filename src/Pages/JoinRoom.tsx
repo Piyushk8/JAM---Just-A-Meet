@@ -76,39 +76,39 @@ export const JoinRoom = () => {
               if (!socket.id) return;
               const token = await fetchLiveKitToken(socket.id, roomId);
 
-              try {
-                const room = await liveKitManager?.join({
-                  url: LIVEKIT_URL,
-                  token,
-                  // url: "ws://localhost:7880",
-                  enableAudio: true,
-                  enableVideo: true,
-                });
-                setIsAudioEnabled(false);
+              // try {
+              //   const room = await liveKitManager?.join({
+              //     url: LIVEKIT_URL,
+              //     token,
+              //     // url: "ws://localhost:7880",
+              //     enableAudio: true,
+              //     enableVideo: true,
+              //   });
+              //   setIsAudioEnabled(false);
 
-                const attachLocalTracks = (room: Room) => {
-                  const container =
-                    document.getElementById("livekit-container");
-                  if (!container) return;
+              //   const attachLocalTracks = (room: Room) => {
+              //     const container =
+              //       document.getElementById("livekit-container");
+              //     if (!container) return;
 
-                  // Clear any old video
-                  container.innerHTML = "";
+              //     // Clear any old video
+              //     container.innerHTML = "";
 
-                  room.localParticipant
-                    .getTrackPublications()
-                    .forEach((pub) => {
-                      if (pub.track) {
-                        const el = pub.track.attach();
-                        el.muted = true; // prevent echo
-                        el.autoplay = true;
-                        container.appendChild(el);
-                      }
-                    });
-                };
-                attachLocalTracks(room);
-              } catch (err) {
-                console.error("LiveKit connection failed:", err);
-              }
+              //     room.localParticipant
+              //       .getTrackPublications()
+              //       .forEach((pub) => {
+              //         if (pub.track) {
+              //           const el = pub.track.attach();
+              //           el.muted = true; // prevent echo
+              //           el.autoplay = true;
+              //           container.appendChild(el);
+              //         }
+              //       });
+              //   };
+              //   attachLocalTracks(room);
+              // } catch (err) {
+              //   console.error("LiveKit connection failed:", err);
+              // }
 
               nav("/r/id");
             }

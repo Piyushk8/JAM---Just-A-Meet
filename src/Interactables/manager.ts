@@ -16,13 +16,18 @@ export interface InteractionEvent {
 
 export type InteractionEventHandler = (event: InteractionEvent) => void;
 
+// Enhanced state update callback type for Redux integration
+export type StateUpdateCallback = (availableInteractions: InteractableObject[], closestInteraction: InteractableObject | null) => void;
+
 export class InteractionManager {
   private interactablesMap: InteractablesMap;
   private interactionState: InteractionState;
   private eventHandlers: Set<InteractionEventHandler> = new Set();
+  private stateUpdateCallback: StateUpdateCallback | null = null;
   private static readonly INTERACTION_COOLDOWN = 300; 
   private static readonly UPDATE_DEBOUNCE = 100; 
   private updateTimeoutId: number | null = null;
+  private currentPlayerPosition: { x: number; y: number } | null = null;
 
   constructor(interactablesMap: InteractablesMap) {
     this.interactablesMap = interactablesMap;
@@ -34,13 +39,19 @@ export class InteractionManager {
     };
   }
 
-  //This is the main thing --> This adds our handlers (custom) and attach calls them on any event crucial for EVENT DRIVEN arch
+  // Set Redux state update callback
+  public setStateUpdateCallback(callback: StateUpdateCallback): void {
+    this.stateUpdateCallback = callback;
+  }
+
   public subscribe(handler: InteractionEventHandler): () => void {
     this.eventHandlers.add(handler);
     return () => this.eventHandlers.delete(handler);
   }
 
   public updateInteractions(playerPosition: { x: number; y: number }): void {
+    this.currentPlayerPosition = playerPosition;
+    
     if (this.updateTimeoutId !== null) {
       clearTimeout(this.updateTimeoutId);
     }
@@ -51,7 +62,6 @@ export class InteractionManager {
   }
 
   public getAvailableInteractions(): InteractableObject[] {
-    console.log(this.interactionState.nearbyObjects)
     return Array.from(this.interactionState.nearbyObjects)
       .map(id => this.interactablesMap.objects.get(id))
       .filter((obj): obj is InteractableObject => obj !== undefined);
@@ -61,18 +71,15 @@ export class InteractionManager {
     const now = Date.now();
     
     if (now < this.interactionState.cooldownUntil) {
-    //   console.log("cooldown");
       return false;
     }
 
     if (!this.interactionState.nearbyObjects.has(objectId)) {
-    //   console.log("Object not in range:", objectId);
       return false;
     }
 
     const object = this.interactablesMap.objects.get(objectId);
     if (!object) {
-    //   console.log("Object not found:", objectId);
       return false;
     }
 
@@ -133,15 +140,20 @@ export class InteractionManager {
       }
     });
 
+    // Update state
     this.interactionState.nearbyObjects = currentNearby;
     this.interactionState.lastPosition = { ...playerPosition };
 
-    // console.log(`📊 Interactions: ${currentNearby.size} available`);
+    console.log(`📊 Interactions: ${currentNearby.size} available`);
+    console.log("Previous nearby:", Array.from(previousNearby));
+    console.log("Current nearby:", Array.from(currentNearby));
 
+    // Fire events for new interactions (available)
     currentNearby.forEach(objectId => {
       if (!previousNearby.has(objectId)) {
         const object = this.interactablesMap.objects.get(objectId);
         if (object) {
+          console.log("🆕 New interaction available:", objectId);
           this.emitEvent({
             type: 'available',
             objectId,
@@ -152,28 +164,39 @@ export class InteractionManager {
       }
     });
 
-    // Find lost interactions
+    // Fire events for lost interactions
     previousNearby.forEach(objectId => {
       if (!currentNearby.has(objectId)) {
+        console.log("❌ Interaction lost:", objectId);
         this.emitEvent({
           type: 'lost',
           objectId
         });
       }
     });
+
+    // Update Redux state automatically
+    this.updateReduxState(playerPosition);
   }
-// here goes the chunking logic , for spatial range (just nearby tiles)....................................
+
+  private updateReduxState(playerPosition: { x: number; y: number }): void {
+    if (this.stateUpdateCallback) {
+      console.log(this.getAvailableInteractions,this.getClosestInteraction)
+      const availableInteractions = this.getAvailableInteractions();
+      const closestInteraction = this.getClosestInteraction(playerPosition);
+      this.stateUpdateCallback(availableInteractions, closestInteraction);
+    }
+  }
+
   private getNearbyObjects(playerPosition: { x: number; y: number }): InteractableObject[] {
     const nearbyObjects = new Set<string>();
     
-    //To Get player's chunk and surrounding chunks
     const { chunkX, chunkY } = tileToChunk(
       playerPosition.x, 
       playerPosition.y, 
       this.interactablesMap.chunkSize
     );
 
-    //To Check 3x3 grid of chunks around player
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const checkChunkKey = getChunkKey(chunkX + dx, chunkY + dy);
@@ -185,7 +208,6 @@ export class InteractionManager {
       }
     }
 
-    // Convert to objects and filter out null values
     return Array.from(nearbyObjects)
       .map(id => this.interactablesMap.objects.get(id))
       .filter((obj): obj is InteractableObject => obj !== undefined);
@@ -197,7 +219,6 @@ export class InteractionManager {
   ): number {
     let minDistance = Infinity;
 
-    // Find minimum distance to any tile of the object
     object.tiles.forEach(tileKey => {
       const [tileX, tileY] = tileKey.split(',').map(Number);
       const distance = manhattanDistance(playerPosition, { x: tileX, y: tileY });
@@ -217,12 +238,12 @@ export class InteractionManager {
     });
   }
 
-  // Cleanup method
   public cleanup(): void {
     if (this.updateTimeoutId !== null) {
       clearTimeout(this.updateTimeoutId);
       this.updateTimeoutId = null;
     }
     this.eventHandlers.clear();
+    this.stateUpdateCallback = null;
   }
 }
