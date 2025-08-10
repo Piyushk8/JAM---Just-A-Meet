@@ -230,12 +230,12 @@ const Player = ({
           break;
 
         case "lost":
-          // console.log(
-          //   "❌ Interaction lost:",
-          //   event.objectId,
-          //   manager.getAvailableInteractions(),
-          //   manager.getClosestInteraction(playerPosition)
-          // );
+          console.log(
+            "❌ Interaction lost:",
+            event.objectId,
+            manager.getAvailableInteractions(),
+            manager.getClosestInteraction(playerPosition)
+          );
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
         
           dispatchInteractable(
@@ -245,11 +245,11 @@ const Player = ({
           break;
 
         case "triggered":
-          // console.log(
-          //   "🎯 Interaction triggered:",
-          //   event.object?.type,
-          //   event.objectId
-          // );
+          console.log(
+            "🎯 Interaction triggered:",
+            event.object?.type,
+            event.objectId
+          );
           if (event.object && onInteraction) {
             onInteraction(event);
           }
@@ -262,7 +262,7 @@ const Player = ({
       unsubscribe();
       manager.cleanup();
     };
-  }, [interactablesMap, onInteraction]);
+  }, [interactablesMap]);
 
   // handles interaction checking on each player position in isolated manager
   useEffect(() => {
@@ -345,7 +345,6 @@ const Player = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "e" || e.key === "E" || e.key === " ") {
         e.preventDefault();
-        console.log("clicked.................................");
         if (interactionManagerRef.current && closestInteraction) {
           interactionManagerRef.current.triggerInteraction(
             closestInteraction.id

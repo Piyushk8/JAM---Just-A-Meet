@@ -123,7 +123,7 @@ export class InteractionManager {
       return;
     }
 
-    console.log("🔍 Updating interactions for position:", playerPosition);
+    // console.log("🔍 Updating interactions for position:", playerPosition);
 
     const previousNearby = new Set(this.interactionState.nearbyObjects);
     const currentNearby = new Set<string>();
@@ -144,16 +144,16 @@ export class InteractionManager {
     this.interactionState.nearbyObjects = currentNearby;
     this.interactionState.lastPosition = { ...playerPosition };
 
-    console.log(`📊 Interactions: ${currentNearby.size} available`);
-    console.log("Previous nearby:", Array.from(previousNearby));
-    console.log("Current nearby:", Array.from(currentNearby));
+    // console.log(`📊 Interactions: ${currentNearby.size} available`);
+    // console.log("Previous nearby:", Array.from(previousNearby));
+    // console.log("Current nearby:", Array.from(currentNearby));
 
     // Fire events for new interactions (available)
     currentNearby.forEach(objectId => {
       if (!previousNearby.has(objectId)) {
         const object = this.interactablesMap.objects.get(objectId);
         if (object) {
-          console.log("🆕 New interaction available:", objectId);
+          // console.log("🆕 New interaction available:", objectId);
           this.emitEvent({
             type: 'available',
             objectId,
@@ -167,7 +167,7 @@ export class InteractionManager {
     // Fire events for lost interactions
     previousNearby.forEach(objectId => {
       if (!currentNearby.has(objectId)) {
-        console.log("❌ Interaction lost:", objectId);
+        console.log("❌ Interaction lost emittef :", objectId);
         this.emitEvent({
           type: 'lost',
           objectId
@@ -176,7 +176,7 @@ export class InteractionManager {
     });
 
     // Update Redux state automatically
-    this.updateReduxState(playerPosition);
+    // this.updateReduxState(playerPosition);
   }
 
   private updateReduxState(playerPosition: { x: number; y: number }): void {

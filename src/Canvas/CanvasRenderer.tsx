@@ -8,7 +8,7 @@ import { updateCurrentUser } from "../Redux/roomState";
 import type { User } from "../types/types";
 import { tileToPixel, ensureTilePosition, TILE_SIZE } from "../lib/utils";
 import Computer from "./InteractionHandlers/Computer";
-import { onInteractionHandler } from "./InteractionHandlers";
+import { useInteractionHandler } from "./InteractionHandlers";
 
 export default function CanvasRenderer({
   mapData,
@@ -32,6 +32,7 @@ export default function CanvasRenderer({
     (state: RootState) => state.miscSlice
   );
   const dispatch = useDispatch();
+  const onInteractionHandler = useInteractionHandler()
   // Initialize user if not exists - with TILE coordinates
   useEffect(() => {
     if (!currentUser) {

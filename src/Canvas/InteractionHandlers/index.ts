@@ -6,14 +6,14 @@ import {
   openVendingMachine,
   openWhiteBoard,
 } from "../../Redux/misc";
+import { useCallback } from "react";
 
 //  type: 'available' | 'lost' | 'triggered';
 //   objectId: string;
 //   object?: InteractableObject;
 //   position?: { x: number; y: number };
 
-export const onInteractionHandler = (event: InteractionEvent) => {
-  const { position, objectId, object, type } = event;
+export const useInteractionHandler = () => {
   const { availableInteractions, closestInteraction } = useSelector(
     (state: RootState) => state.interactionState
   );
@@ -28,20 +28,24 @@ export const onInteractionHandler = (event: InteractionEvent) => {
   const whiteBoardHandler = () => {
     dispatch(openWhiteBoard());
   };
-  console.log("interactionhandlers",closestInteraction, availableInteractions)
 
-  if (type === "triggered") {
-    if (position && closestInteraction) {
-      switch (closestInteraction.type) {
-        case "computer":
-          computerHandler();
-        case "vendingmachine":
-          vendingmachineHandler();
-        case "whiteboard":
-          whiteBoardHandler();
+  const handler = useCallback(
+    (event: InteractionEvent) => {
+      if (event.type === "triggered" && closestInteraction) {
+        switch (closestInteraction.type) {
+          case "computer":
+            computerHandler();
+            break;
+          case "vendingmachine":
+            vendingmachineHandler();
+            break;
+          case "whiteboard":
+            whiteBoardHandler();
+            break;
+        }
       }
-    }
-  } else {
-    return;
-  }
+    },
+    [closestInteraction]
+  );
+  return handler;
 };
