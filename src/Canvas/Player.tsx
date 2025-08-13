@@ -52,8 +52,6 @@ const Player = ({
   const interactionManagerRef = useRef<InteractionManagerType | null>(null);
 
   // Critical dont touch, mistake in past!!!: Always ensure we're working with tile coordinates no pixels 
-  console.log("player Positions",playerPosition)
-
   //   useEffect(() => {
   //   if (externalPosition && isPixelCoordinate(externalPosition)) {
   //     console.warn('⚠️ COORDINATE SYSTEM ISSUE: Received pixel coordinates:', externalPosition);

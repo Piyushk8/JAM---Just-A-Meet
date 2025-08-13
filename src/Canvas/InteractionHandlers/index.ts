@@ -12,40 +12,33 @@ import { useCallback } from "react";
 //   objectId: string;
 //   object?: InteractableObject;
 //   position?: { x: number; y: number };
-
 export const useInteractionHandler = () => {
-  const { availableInteractions, closestInteraction } = useSelector(
+  const { closestInteraction } = useSelector(
     (state: RootState) => state.interactionState
   );
   const dispatch = useDispatch();
 
-  const computerHandler = () => {
-    dispatch(openComputer());
-  };
-  const vendingmachineHandler = () => {
-    dispatch(openVendingMachine());
-  };
-  const whiteBoardHandler = () => {
-    dispatch(openWhiteBoard());
-  };
-
   const handler = useCallback(
     (event: InteractionEvent) => {
-      if (event.type === "triggered" && closestInteraction) {
-        switch (closestInteraction.type) {
+      console.log("event",event)
+      if (event.type === "triggered") {
+        const interactionType = closestInteraction?.type ?? event.object?.type;
+
+        switch (interactionType) {
           case "computer":
-            computerHandler();
+            dispatch(openComputer());
             break;
           case "vendingmachine":
-            vendingmachineHandler();
+            dispatch(openVendingMachine());
             break;
           case "whiteboard":
-            whiteBoardHandler();
+            dispatch(openWhiteBoard());
             break;
         }
       }
     },
-    [closestInteraction]
+    [dispatch, closestInteraction] // still depends on Redux state
   );
+
   return handler;
 };
