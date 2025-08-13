@@ -49,23 +49,23 @@ export class LiveKitManager {
         RoomEvent.AudioPlaybackStatusChanged,
         this.handleAudioPlaybackStatusChanged
       );
-    // this.room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
-    //   console.log(
-    //     "[LiveKit] Subscribed to track:",
-    //     track.kind,
-    //     "from",
-    //     participant.identity
-    //   );
-    // });
+    this.room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      console.log(
+        "[LiveKit] Subscribed to track:",
+        track.kind,
+        "from",
+        participant.identity
+      );
+    });
 
-    // this.room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-    //   console.log(
-    //     "[LiveKit] Unsubscribed from track:",
-    //     track.kind,
-    //     "from",
-    //     participant.identity
-    //   );
-    // });
+    this.room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      console.log(
+        "[LiveKit] Unsubscribed from track:",
+        track.kind,
+        "from",
+        participant.identity
+      );
+    });
 
     this.room.on(
       RoomEvent.TrackSubscribed,
@@ -112,8 +112,10 @@ export class LiveKitManager {
   }
   syncSubscriptions(entered: string[], left: string[]) {
     if (!this.room) return;
+    console.log('sync progressed')
     for (const p of entered) this.subscribeIdentity(p);
     for (const p of left) this.unSubscribeIdentity(p);
+    console.log("sync end")
   }
 
   //  This first checks for identity in the room in case it has not joined in and sends to pending queue 
@@ -162,17 +164,18 @@ export class LiveKitManager {
 
   // ---- event handlers ----
   //  This subs to users who are now connected to us first checks the pending queue and subs then delete from the queue
-  private handleParticipantConnected(p: RemoteParticipant) {
-    if (!this.room) return;
+  private handleParticipantConnected = (p: RemoteParticipant) => {
+  if (!this.room) return;
 
-    if (this.pendingToSubscribeToTrackIDs.has(p.identity)) {
-      this.subscribedToTrackIDs.add(p.identity);
-      p.getTrackPublications().forEach((p) =>
-        (p as RemoteTrackPublication).setSubscribed(true)
-      );
-      this.pendingToSubscribeToTrackIDs.delete(p.identity);
-    }
+  if (this.pendingToSubscribeToTrackIDs.has(p.identity)) {
+    this.subscribedToTrackIDs.add(p.identity);
+    p.getTrackPublications().forEach((pub) =>
+      (pub as RemoteTrackPublication).setSubscribed(true)
+    );
+    this.pendingToSubscribeToTrackIDs.delete(p.identity);
   }
+}
+
   // this allows us to attach the video and audio components to our screen 
   private handleTrackSubscribed = (
     track: RemoteTrack,

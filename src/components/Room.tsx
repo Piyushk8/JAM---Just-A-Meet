@@ -235,6 +235,7 @@ export default function PhaserRoom() {
   };
   return (
     <div className="relative">
+      <div id="livekit-container"  className="livekit-container absolute top-0 right-0 h-16 w-20"></div>
       {/* Media Controls */}
       <div className="absolute top-4 left-4 z-50 flex space-x-3">
         <button

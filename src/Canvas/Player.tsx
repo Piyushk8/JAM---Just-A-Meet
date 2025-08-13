@@ -22,8 +22,7 @@ type Props = {
   ctx: CanvasRenderingContext2D | null;
   tilesize: number;
   playerImage: HTMLImageElement | null;
-  playerPosition?: { x: number; y: number };
-  onPositionChange?: (position: { x: number; y: number }) => void;
+  playerPosition: { x: number; y: number };
   onInteraction: (event: InteractionEvent) => void;
 };
 
@@ -38,9 +37,8 @@ const Player = ({
   ctx,
   tilesize,
   playerImage,
-  playerPosition: externalPosition,
-  onPositionChange,
-  onInteraction,
+  playerPosition,
+  onInteraction
 }: Props) => {
   const [collisionMap, setCollisionMap] = useState<CollisionMap | null>(null);
   const dispatch = useDispatch();
@@ -54,7 +52,7 @@ const Player = ({
   const interactionManagerRef = useRef<InteractionManagerType | null>(null);
 
   // Critical dont touch, mistake in past!!!: Always ensure we're working with tile coordinates no pixels 
-  const playerPosition = externalPosition || { x: 22, y: 10 };
+  console.log("player Positions",playerPosition)
 
   //   useEffect(() => {
   //   if (externalPosition && isPixelCoordinate(externalPosition)) {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import type { TiledMap } from "../types/canvas";
 import { findTilesetForGID, getInteractionLabelPosition } from "../lib/helper";
 import Player from "./Player";
@@ -6,9 +6,17 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
 import { updateCurrentUser } from "../Redux/roomState";
 import type { User } from "../types/types";
-import { tileToPixel, ensureTilePosition, TILE_SIZE } from "../lib/utils";
+import {
+  tileToPixel,
+  ensureTilePosition,
+  TILE_SIZE,
+  pixelToTile,
+} from "../lib/utils";
 import Computer from "./InteractionHandlers/Computer";
 import { useInteractionHandler } from "./InteractionHandlers";
+
+const CAMERA_SMOOTH_FACTOR = 0.1; // Lower = smoother but slower (0.05-0.15 range)
+const CAMERA_DEAD_ZONE = 2; // Pixels - prevents micro-movements
 
 export default function CanvasRenderer({
   mapData,
@@ -22,26 +30,103 @@ export default function CanvasRenderer({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const backgroundCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const { currentUser, usersInRoom } = useSelector(
+  const [backgroundNeedsUpdate, setBackgroundNeedsUpdate] = useState(true);
+
+  const [viewport, setViewport] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  useEffect(() => {
+    function handleResize() {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+
+  const { currentUser, usersInRoom, nearbyParticipants } = useSelector(
     (state: RootState) => state.roomState
   );
+
+  const [camera, setCamera] = useState({ x: 0, y: 0 });
+  // Smooth camera update function
+  
+  /**  
+   * This one takes current user postion according to camera and uses Linear interpolation to smoothely 
+   * make changes to camera location with moves percent Smooth factor of diff in current to target
+   * 
+   * to prevent jitter  
+   * 
+  */
+  const updateSmoothCamera = useCallback(() => {
+    if (!currentUser || !mapData) return;
+
+    // Calculates target camera position
+    const playerPixelPos = tileToPixel({ x: currentUser.x, y: currentUser.y });
+    const targetX = playerPixelPos.x - viewport.width / 2;
+    const targetY = playerPixelPos.y - viewport.height / 2;
+
+    const worldWidth = mapData.width * mapData.tilewidth;
+    const worldHeight = mapData.height * mapData.tileheight;
+
+    const clampedTargetX = Math.max(
+      0,
+      Math.min(targetX, worldWidth - viewport.width)
+    );
+    const clampedTargetY = Math.max(
+      0,
+      Math.min(targetY, worldHeight - viewport.height)
+    );
+
+    setCamera((prevCamera) => {
+      const diffX = clampedTargetX - prevCamera.x;
+      const diffY = clampedTargetY - prevCamera.y;
+
+      if (
+        Math.abs(diffX) < CAMERA_DEAD_ZONE &&
+        Math.abs(diffY) < CAMERA_DEAD_ZONE
+      ) {
+        return prevCamera;
+      }
+
+      return {
+        x: prevCamera.x + diffX * CAMERA_SMOOTH_FACTOR,
+        y: prevCamera.y + diffY * CAMERA_SMOOTH_FACTOR,
+      };
+    });
+  }, [currentUser, mapData]);
+
+
+  useEffect(() => {
+    const intervalId = setInterval(updateSmoothCamera, 16); // ~60fps
+    return () => clearInterval(intervalId);
+  }, [updateSmoothCamera]);
+
+  const nearbyUserIds = new Set(nearbyParticipants);
+
   const { availableInteractions, closestInteraction } = useSelector(
     (state: RootState) => state.interactionState
   );
   const { isComputer, isVendingMachineOpen, isWhiteBoardOpen } = useSelector(
     (state: RootState) => state.miscSlice
   );
+
   const dispatch = useDispatch();
-  const onInteractionHandler = useInteractionHandler()
-  // Initialize user if not exists - with TILE coordinates
+  const onInteractionHandler = useInteractionHandler();
+
   useEffect(() => {
     if (!currentUser) {
       console.log("🚀 Initializing user with default tile position");
       dispatch(
         updateCurrentUser({
           id: "user-" + Math.random().toString(36).substr(2, 9),
-          x: 22, // TILE coordinates, not pixels -- major mistake in past!!!!
-          y: 10, // TILE coordinates, not pixels
+          x: 22,
+          y: 10,
         })
       );
     }
@@ -51,8 +136,8 @@ export default function CanvasRenderer({
     return <div>Initializing player...</div>;
   }
 
-  // Render the background
   const renderBackground = useCallback(() => {
+    if (!backgroundNeedsUpdate) return;
     if (
       !mapData ||
       Object.keys(tilesetImages).length === 0 ||
@@ -64,110 +149,233 @@ export default function CanvasRenderer({
     const bgCtx = bgCanvas.getContext("2d");
     if (!bgCtx) return;
 
-    // Set canvas size
-    bgCanvas.width = mapData.width * mapData.tilewidth;
-    bgCanvas.height = mapData.height * mapData.tileheight;
+    // current canvas set to map size
+    const worldWidth = mapData.width * mapData.tilewidth;
+    const worldHeight = mapData.height * mapData.tileheight;
 
-    // Clear canvas
+    if (bgCanvas.width !== worldWidth || bgCanvas.height !== worldHeight) {
+      bgCanvas.width = worldWidth;
+      bgCanvas.height = worldHeight;
+    }
+
+    bgCtx.imageSmoothingEnabled = false; // this one controls image quality, currenlty pixelated
     bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
 
-    // Render all layers except collision-only layers
     mapData.layers.forEach((layer) => {
-      // Skip pure collision layers
       const isCollisionOnly =
         layer.name.toLowerCase().includes("collision") &&
         !layer.name.toLowerCase().includes("visual");
 
       if (isCollisionOnly) return;
 
-      if (layer.type === "tilelayer") {
-        layer.data.forEach((gid, i) => {
-          if (gid === 0) return;
-
-          const ts = findTilesetForGID(gid, mapData.tilesets);
-          const img = tilesetImages[ts.image.split("/").pop()!];
-          if (!img) return;
-
-          const localId = gid - ts.firstgid;
-          const sx = (localId % ts.columns) * ts.tilewidth;
-          const sy = Math.floor(localId / ts.columns) * ts.tileheight;
-          const dx = (i % mapData.width) * mapData.tilewidth;
-          const dy = Math.floor(i / mapData.width) * mapData.tileheight;
-
-          bgCtx.drawImage(
-            img,
-            sx,
-            sy,
-            ts.tilewidth,
-            ts.tileheight,
-            dx,
-            dy,
-            ts.tilewidth,
-            ts.tileheight
-          );
-        });
+      if (layer.type === "tilelayer" && layer.data) {
+        renderTileLayer(bgCtx, layer);
       }
 
       if (
         layer.type === "objectgroup" &&
         Array.isArray((layer as any).objects)
       ) {
-        (layer as any).objects.forEach((obj: any) => {
-          const gid = obj.gid;
-          if (!gid) return;
-
-          const ts = findTilesetForGID(gid, mapData.tilesets);
-          const img = tilesetImages[ts.image.split("/").pop()!];
-          if (!img) return;
-
-          const localId = gid - ts.firstgid;
-          const sx = (localId % ts.columns) * ts.tilewidth;
-          const sy = Math.floor(localId / ts.columns) * ts.tileheight;
-          const dx = obj.x!;
-          const dy = obj.y! - ts.tileheight; // Tiled uses bottom-left anchor
-
-          bgCtx.drawImage(
-            img,
-            sx,
-            sy,
-            ts.tilewidth,
-            ts.tileheight,
-            dx,
-            dy,
-            ts.tilewidth,
-            ts.tileheight
-          );
-        });
+        renderObjectLayer(bgCtx, layer);
       }
     });
+
+    setBackgroundNeedsUpdate(false);
+  }, [mapData, tilesetImages, backgroundNeedsUpdate]);
+
+  const renderTileLayer = useCallback(
+    (ctx: CanvasRenderingContext2D, layer: any) => {
+      const { data } = layer;
+
+      for (let i = 0; i < data.length; i++) {
+        const gid = data[i];
+        if (gid === 0) continue;
+
+        const ts = findTilesetForGID(gid, mapData.tilesets);
+        const img = tilesetImages[ts.image.split("/").pop()!];
+        if (!img) continue;
+
+        const localId = gid - ts.firstgid;
+        const sx = (localId % ts.columns) * ts.tilewidth;
+        const sy = Math.floor(localId / ts.columns) * ts.tileheight;
+        const dx = (i % mapData.width) * mapData.tilewidth;
+        const dy = Math.floor(i / mapData.width) * mapData.tileheight;
+
+        ctx.drawImage(
+          img,
+          sx,
+          sy,
+          ts.tilewidth,
+          ts.tileheight,
+          dx,
+          dy,
+          ts.tilewidth,
+          ts.tileheight
+        );
+      }
+    },
+    [mapData, tilesetImages]
+  );
+
+  const renderObjectLayer = useCallback(
+    (ctx: CanvasRenderingContext2D, layer: any) => {
+      layer.objects.forEach((obj: any) => {
+        const gid = obj.gid;
+        if (!gid) return;
+
+        const ts = findTilesetForGID(gid, mapData.tilesets);
+        const img = tilesetImages[ts.image.split("/").pop()!];
+        if (!img) return;
+
+        const localId = gid - ts.firstgid;
+        const sx = (localId % ts.columns) * ts.tilewidth;
+        const sy = Math.floor(localId / ts.columns) * ts.tileheight;
+        const dx = obj.x!;
+        const dy = obj.y! - ts.tileheight;
+
+        ctx.drawImage(
+          img,
+          sx,
+          sy,
+          ts.tilewidth,
+          ts.tileheight,
+          dx,
+          dy,
+          ts.tilewidth,
+          ts.tileheight
+        );
+      });
+    },
+    [mapData, tilesetImages]
+  );
+
+  useEffect(() => {
+    setBackgroundNeedsUpdate(true);
   }, [mapData, tilesetImages]);
 
-  //converts tile coordinates to pixel coordinates for drawing
+// this one renders player sprites for all users in room 
   const renderPlayer = useCallback(
     (ctx: CanvasRenderingContext2D, player: User) => {
       if (!characters[0] || !player) return;
 
-      // Ensure we have tile coordinates
-      const tilePos = ensureTilePosition({ x: player.x, y: player.y });
+      let tilePos = ensureTilePosition({ x: player.x, y: player.y });
+      if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
 
-      // Convert tile coordinates to pixel coordinates for rendering
       const pixelPos = tileToPixel(tilePos);
+      const screenX = pixelPos.x - camera.x;
+      const screenY = pixelPos.y - camera.y;
 
-      // console.log('🎨 Rendering player at tile:', tilePos, 'pixel:', pixelPos);
+      const BUFFER = 32;
+      if (
+        screenX + TILE_SIZE < -BUFFER ||
+        screenX > viewport.width + BUFFER ||
+        screenY + TILE_SIZE < -BUFFER ||
+        screenY > viewport.height + BUFFER
+      ) {
+        return;
+      }
 
-      // Draw player at pixel position
-      ctx.drawImage(
-        characters[0],
-        pixelPos.x,
-        pixelPos.y,
-        TILE_SIZE,
-        TILE_SIZE
-      );
+      // Draw player sprite
+      ctx.drawImage(characters[0], screenX, screenY, TILE_SIZE, TILE_SIZE);
+
+      // AV status icons for nearby players
+      const isNearby = nearbyUserIds.has(player.id);
+      if (isNearby) {
+        const iconSize = 12;
+        const iconY = screenY - 24;
+
+        // Audio icon
+        ctx.fillStyle = player.isAudioEnabled ? "green" : "red";
+        ctx.beginPath();
+        ctx.arc(
+          screenX + TILE_SIZE / 2 - 10,
+          iconY,
+          iconSize / 2,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Video icon
+        ctx.fillStyle = player.isVideoEnabled ? "green" : "red";
+        ctx.fillRect(
+          screenX + TILE_SIZE / 2 + 2,
+          iconY - iconSize / 2,
+          iconSize,
+          iconSize
+        );
+      }
     },
-    [characters, usersInRoom]
+    [characters, camera, nearbyUserIds]
   );
 
-  // Main render loop
+  const renderAllPlayerLabels = useCallback(
+    (ctx: CanvasRenderingContext2D, players: User[]) => {
+      ctx.font = "bold 14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.lineWidth = 3;
+
+      players.forEach((player) => {
+        if (!player.username) return;
+
+        // Calculate screen position correctly
+        let tilePos = ensureTilePosition({ x: player.x, y: player.y });
+        if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
+
+        const pixelPos = tileToPixel(tilePos);
+        const screenX = pixelPos.x - camera.x;
+        const screenY = pixelPos.y - camera.y;
+
+        // Culling for text
+        if (
+          screenX < -50 ||
+          screenX > viewport.width + 50 ||
+          screenY < -20 ||
+          screenY > viewport.height + 20
+        ) {
+          return;
+        }
+
+        const textX = screenX + TILE_SIZE / 2;
+        const textY = screenY - 8;
+
+        ctx.strokeStyle = "black";
+        ctx.strokeText(player.username, textX, textY);
+
+        ctx.fillStyle = "white";
+        ctx.fillText(player.username, textX, textY);
+      });
+    },
+    [camera]
+  );
+
+  const isInteractionVisible = useCallback(
+    (interaction: any) => {
+      if (!interaction) return false;
+
+      const interactionPos = getInteractionLabelPosition(interaction);
+      const screenX = interactionPos.x - camera.x;
+      const screenY = interactionPos.y - camera.y;
+
+      return (
+        screenX >= -100 &&
+        screenX <= viewport.width + 100 &&
+        screenY >= -100 &&
+        screenY <= viewport.height + 100
+      );
+    },
+    [camera]
+  );
+
+  const players = useMemo(() => {
+    return [
+      currentUser,
+      ...Object.values(usersInRoom).filter((p) => p.id !== currentUser.id),
+    ].filter(Boolean);
+  }, [usersInRoom, currentUser]);
+
+  // Main render LOGIC
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -177,24 +385,41 @@ export default function CanvasRenderer({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw background
     if (backgroundCanvasRef.current) {
-      ctx.drawImage(backgroundCanvasRef.current, 0, 0);
+      const bgCanvas = backgroundCanvasRef.current;
+
+      // Calculate safe source rectangle
+      const sourceX = Math.max(0, Math.floor(camera.x));
+      const sourceY = Math.max(0, Math.floor(camera.y));
+      const sourceWidth = Math.min(viewport.width, bgCanvas.width - sourceX);
+      const sourceHeight = Math.min(viewport.height, bgCanvas.height - sourceY);
+
+      if (sourceWidth > 0 && sourceHeight > 0) {
+        ctx.drawImage(
+          bgCanvas,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          0,
+          0,
+          sourceWidth,
+          sourceHeight
+        );
+      }
     }
 
-    // Draw all players
-    [
-      currentUser,
-      ...Object.values(usersInRoom).filter((p) => p.id != currentUser.id),
-    ].forEach((player) => {
+    // Renders all players
+    players.forEach((player) => {
       renderPlayer(ctx, player);
     });
 
-    // Continue the render loop
-    animationFrameRef.current = requestAnimationFrame(render);
-  }, [currentUser, usersInRoom, renderPlayer]);
+    // Renders all labels
+    renderAllPlayerLabels(ctx, players);
 
-  // Initializes canvases and start render loop
+    animationFrameRef.current = requestAnimationFrame(render);
+  }, [camera, players, renderPlayer, renderAllPlayerLabels]);
+
   useEffect(() => {
     if (
       !mapData ||
@@ -205,86 +430,93 @@ export default function CanvasRenderer({
       return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
 
-    canvas.width = mapData.width * mapData.tilewidth;
-    canvas.height = mapData.height * mapData.tileheight;
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
     renderBackground();
-
     render();
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     };
-  }, [mapData, tilesetImages, render, renderBackground, usersInRoom]);
+  }, [mapData, tilesetImages, renderBackground, render]);
 
+  
   return (
-    <div className="relative" style={{ backgroundColor: "black" }}>
-      <div className="flex h-14 w-lg shadow-2xl ring-1 ring-offset-white rounded-b-lg sticky top-2 left-1/2 transform -translate-x-1/2 z-10 text-red-300">
-        <div className="bg-gray-800 px-4 py-2 rounded text-white">
-          Player Position: Tile ({currentUser.x}, {currentUser.y})
-        </div>
-      </div>
-      {closestInteraction && (
-        <div
-          style={{
-            position: "absolute",
-            left: getInteractionLabelPosition(closestInteraction).x - 30,
-            top: getInteractionLabelPosition(closestInteraction).y + 40,
-            transform: "translate(-10%, 10%)", // center horizontally, place above
-            background: "rgba(0,0,0,0.7)",
-            color: "#fff",
-          }}
-          className="text-xl  font-mono text-balance h-fit text-center flex justify-center items-center w-fit  rounded-xl px-4 py-2 mb-3"
-        >
-          Press E
-        </div>
-      )}
-      {isComputer && closestInteraction && (
-        <div
-          style={{
-            position: "absolute",
-            left: getInteractionLabelPosition(closestInteraction).x,
-            top: getInteractionLabelPosition(closestInteraction).y,
-            transform: "translate(-50%, -100%)", // center horizontally, place above
-            background: "rgba(0,0,0,0.7)",
-            color: "#fff",
-            padding: "2px 6px",
-            borderRadius: "4px",
-            fontSize: "12px",
-          }}
-          className="font-mono"
-        >
-          Press E
-        </div>
-      )}
-      <div className="h-95vh bg-sky-300">
-        {/* Hidden background canvas */}
-        <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />
+    <div className="relative w-full h-screen bg-sky-300 overflow-hidden">
+      {isComputer &&
+        closestInteraction &&
+        isInteractionVisible(closestInteraction) && (
+          <div
+            style={{
+              position: "absolute",
+              left:
+                getInteractionLabelPosition(closestInteraction).x - camera.x,
+              top: getInteractionLabelPosition(closestInteraction).y - camera.y,
+              transform: "translate(-50%, -100%)",
+              background: "rgba(0,0,0,0.7)",
+              color: "#fff",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              fontSize: "12px",
+              zIndex: 15,
+            }}
+            className="font-mono"
+          >
+            Press E
+          </div>
+        )}
 
-        {/* Main visible canvas */}
-        <canvas
-          ref={canvasRef}
-          width={mapData.width * TILE_SIZE}
-          height={mapData.height * TILE_SIZE}
-          style={{
-            border: "1px solid #ccc",
-            imageRendering: "pixelated",
-          }}
-        />
+      {/* Game canvas container */}
+      <div className="flex items-center justify-center w-full h-full">
+        <div className="relative">
+          <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />
 
-        <Player
-          ctx={canvasRef.current?.getContext("2d") || null}
-          mapData={mapData}
-          tilesize={TILE_SIZE}
-          playerImage={characters[0]}
-          playerPosition={{ x: currentUser.x, y: currentUser.y }}
-          onInteraction={onInteractionHandler}
-        />
+          <canvas
+            ref={canvasRef}
+            width={viewport.width}
+            height={viewport.height}
+            style={{
+              border: "1px solid #ccc",
+              imageRendering: "pixelated",
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+          />
+          {closestInteraction && (
+            <div
+              style={{
+                position: "absolute",
+                left:
+                  getInteractionLabelPosition(closestInteraction).x - camera.x,
+                top:
+                  getInteractionLabelPosition(closestInteraction).y - camera.y,
+                transform: "translate(-50%, -100%)",
+                background: "rgba(0,0,0,0.7)",
+                color: "#fff",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontSize: "12px",
+                zIndex: 15,
+              }}
+              className="font-mono"
+            >
+              Press E
+            </div>
+          )}
+          <Player
+            ctx={canvasRef.current?.getContext("2d") || null}
+            mapData={mapData}
+            tilesize={TILE_SIZE}
+            playerImage={characters[0]}
+            playerPosition={{ x: currentUser.x, y: currentUser.y }}
+            onInteraction={onInteractionHandler}
+          />
+        </div>
       </div>
     </div>
   );
