@@ -6,8 +6,11 @@ export interface userData {
   socketId: string;
 }
 
+export type UserAvailabilityStatus = "idle" | "busy" | "away";
+
 export interface User {
   id: string;
+  availability: UserAvailabilityStatus;
   username: string;
   x: number;
   y: number;
@@ -55,7 +58,6 @@ export type RoomSyncPayload = {
   audio: Array<{ id: string; level: number }>;
 };
 
-
 export type ServerToClient = {
   "room-users": (users: User[]) => void;
   "user-joined": (user: User) => void;
@@ -84,4 +86,5 @@ export type ClientToServer = {
   "send-message": (data: { message: string; type: "text" | "emoji" }) => void;
   "typing-start": () => void;
   "typing-stop": () => void;
+  "userStatusChange": (data: { status: UserAvailabilityStatus }) => void;
 };

@@ -71,6 +71,7 @@ export const JoinRoom = () => {
                   isAudioEnabled: false,
                   isVideoEnabled: false,
                   sprite: "",
+                  availability:"idle"
                 })
               );
               if (!socket.id) return;

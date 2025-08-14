@@ -5,6 +5,8 @@ const initialState = {
   isVendingMachineOpen: false,
   isComputer: false,
   // isWhiteBoardOpen:false,
+  isUserControlsOpen: false,
+  isleftSideBarOpen: false,
 };
 
 const miscSlice = createSlice({
@@ -29,11 +31,26 @@ const miscSlice = createSlice({
     closeVendingMachine: (state) => {
       state.isVendingMachineOpen = false;
     },
-    open: () => {},
+    openUserControls: (state) => {
+      state.isUserControlsOpen = true;
+    },
+    openLeftSideBar: (state) => {
+      state.isleftSideBarOpen = true;
+    },
+    closeLeftSideBar: (state) => {
+      state.isleftSideBarOpen = false;
+    },
+    closeUserControls: (state) => {
+      state.isUserControlsOpen = false;
+    },
   },
 });
 
 export const {
+  openUserControls,
+  openLeftSideBar,
+  closeLeftSideBar,
+  closeUserControls,
   openComputer,
   openVendingMachine,
   openWhiteBoard,

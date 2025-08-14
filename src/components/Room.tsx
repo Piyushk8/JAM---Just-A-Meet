@@ -22,6 +22,10 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
 import { getSocket } from "../socket";
 import { useSocket } from "../SocketProvider";
+import UserControls from "./roomComponents/userControls";
+import UserControlButton from "./roomComponents/userControlButton";
+import NearbyUsers from "./NearbyUserList/NearbyUserList";
+
 
 interface ChatMessage {
   id: string;
@@ -79,6 +83,9 @@ export default function PhaserRoom() {
     isVideoEnabled,
     // usersInRoom,
   } = useSelector((state: RootState) => state.roomState);
+  const { isUserControlsOpen, isleftSideBarOpen } = useSelector(
+    (state: RootState) => state.miscSlice
+  );
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -235,7 +242,10 @@ export default function PhaserRoom() {
   };
   return (
     <div className="relative">
-      <div id="livekit-container"  className="livekit-container absolute top-0 right-0 h-16 w-20"></div>
+      <div
+        id="livekit-container"
+        className="livekit-container absolute top-0 right-0 h-16 w-20"
+      ></div>
       {/* Media Controls */}
       <div className="absolute top-4 left-4 z-50 flex space-x-3">
         <button
@@ -254,6 +264,15 @@ export default function PhaserRoom() {
 
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
       <Canvas />
+
+      {/* userControls */}
+      {isUserControlsOpen ? (
+        <UserControls />
+      ) : (
+       <UserControlButton/>
+      )}
+
+      <NearbyUsers/>
 
       {/* Chat Panel */}
       {showChat && (

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import type { ObjectLayer, TiledMap, TileLayer } from "../types/canvas";
 import { useDispatch, useSelector } from "react-redux";
 import { updateCurrentUser } from "../Redux/roomState";
-import { ensureTilePosition, type TilePosition } from "../lib/utils";
+import { ensureTilePosition, type TilePosition } from "../lib/helper";
 import { useSocket } from "../SocketProvider";
 import type {
   InteractableObject,

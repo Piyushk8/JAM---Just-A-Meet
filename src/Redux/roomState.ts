@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { User } from "../types/types";
+import type { User, UserAvailabilityStatus } from "../types/types";
 
 interface RoomState {
   currentUser: User | null;
@@ -82,7 +82,7 @@ const livekitSlice = createSlice({
       state.nearbyParticipants = Array.from(currentSet);
     },
     updateUsersInRoom: (state, action: PayloadAction<Partial<User>[]>) => {
-       for (const player of action.payload) {
+      for (const player of action.payload) {
         if (!player.id) continue;
 
         const existing = state.usersInRoom[player.id];
@@ -109,11 +109,20 @@ const livekitSlice = createSlice({
     setIsVideoEnabled: (state, action: PayloadAction<boolean>) => {
       state.isVideoEnabled = action.payload;
     },
+    setAvailability: (state, action: PayloadAction<UserAvailabilityStatus>) => {
+      if (state.currentUser) {
+        state.currentUser = {
+          ...state.currentUser,
+          availability: action.payload,
+        };
+      }
+    },
   },
 });
 
 export const {
   addUserInRoom,
+  setAvailability,
   removeFromUsersInRoom,
   setCurrentUser,
   updateCurrentUser,

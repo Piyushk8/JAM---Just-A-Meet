@@ -11,7 +11,7 @@ import {
   ensureTilePosition,
   TILE_SIZE,
   pixelToTile,
-} from "../lib/utils";
+} from "../lib/helper";
 import Computer from "./InteractionHandlers/Computer";
 import { useInteractionHandler } from "./InteractionHandlers";
 
@@ -48,21 +48,20 @@ export default function CanvasRenderer({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-
   const { currentUser, usersInRoom, nearbyParticipants } = useSelector(
     (state: RootState) => state.roomState
   );
 
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   // Smooth camera update function
-  
-  /**  
-   * This one takes current user postion according to camera and uses Linear interpolation to smoothely 
+
+  /**
+   * This one takes current user postion according to camera and uses Linear interpolation to smoothely
    * make changes to camera location with moves percent Smooth factor of diff in current to target
-   * 
-   * to prevent jitter  
-   * 
-  */
+   *
+   * to prevent jitter
+   *
+   */
   const updateSmoothCamera = useCallback(() => {
     if (!currentUser || !mapData) return;
 
@@ -100,7 +99,6 @@ export default function CanvasRenderer({
       };
     });
   }, [currentUser, mapData]);
-
 
   useEffect(() => {
     const intervalId = setInterval(updateSmoothCamera, 16); // ~60fps
@@ -253,7 +251,7 @@ export default function CanvasRenderer({
     setBackgroundNeedsUpdate(true);
   }, [mapData, tilesetImages]);
 
-// this one renders player sprites for all users in room 
+  // this one renders player sprites for all users in room
   const renderPlayer = useCallback(
     (ctx: CanvasRenderingContext2D, player: User) => {
       if (!characters[0] || !player) return;
@@ -309,46 +307,81 @@ export default function CanvasRenderer({
     [characters, camera, nearbyUserIds]
   );
 
-  const renderAllPlayerLabels = useCallback(
-    (ctx: CanvasRenderingContext2D, players: User[]) => {
-      ctx.font = "bold 14px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      ctx.lineWidth = 3;
+const renderAllPlayerLabels = useCallback(
+  (ctx: CanvasRenderingContext2D, players: User[]) => {
+    ctx.font = "bold 14px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    ctx.lineWidth = 3;
 
-      players.forEach((player) => {
-        if (!player.username) return;
+    players.forEach((player) => {
+      if (!player.username) return;
 
-        // Calculate screen position correctly
-        let tilePos = ensureTilePosition({ x: player.x, y: player.y });
-        if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
+      // Calculate screen position
+      let tilePos = ensureTilePosition({ x: player.x, y: player.y });
+      if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
 
-        const pixelPos = tileToPixel(tilePos);
-        const screenX = pixelPos.x - camera.x;
-        const screenY = pixelPos.y - camera.y;
+      const pixelPos = tileToPixel(tilePos);
+      const screenX = pixelPos.x - camera.x;
+      const screenY = pixelPos.y - camera.y;
 
-        // Culling for text
-        if (
-          screenX < -50 ||
-          screenX > viewport.width + 50 ||
-          screenY < -20 ||
-          screenY > viewport.height + 20
-        ) {
-          return;
-        }
+      // Culling
+      if (
+        screenX < -50 ||
+        screenX > viewport.width + 50 ||
+        screenY < -20 ||
+        screenY > viewport.height + 20
+      ) {
+        return;
+      }
 
-        const textX = screenX + TILE_SIZE / 2;
-        const textY = screenY - 8;
+      const textX = screenX + TILE_SIZE / 2;
+      const textY = screenY - 8;
 
-        ctx.strokeStyle = "black";
-        ctx.strokeText(player.username, textX, textY);
+      // Outline + username text
+      ctx.strokeStyle = "black";
+      ctx.strokeText(player.username, textX, textY);
+      ctx.fillStyle = "white";
+      ctx.fillText(player.username, textX, textY);
 
-        ctx.fillStyle = "white";
-        ctx.fillText(player.username, textX, textY);
-      });
-    },
-    [camera]
-  );
+      // Status dot position
+      const dotX = textX + ctx.measureText(player.username).width / 2 + 8;
+      const dotY = textY - 8;
+      const radius = 4;
+
+      // Base color by availability
+      let baseColor;
+      switch (player.availability) {
+        case "idle": baseColor = "#7CFC00"; break;   // bright green
+        case "away": baseColor = "#FFD700"; break;   // gold
+        default: baseColor = "#EE4B2B"; break;       // red
+      }
+
+      // Glow + shiny gradient
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = baseColor;
+
+      const gradient = ctx.createRadialGradient(dotX - 1, dotY - 1, 1, dotX, dotY, radius);
+      gradient.addColorStop(0, "white");       
+      gradient.addColorStop(0.3, baseColor);   
+      gradient.addColorStop(1, "black");       
+
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      ctx.beginPath();
+      ctx.arc(dotX - 1.2, dotY - 1.5, 1.3, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fill();
+    });
+  },
+  [camera]
+);
+
 
   const isInteractionVisible = useCallback(
     (interaction: any) => {
@@ -445,7 +478,6 @@ export default function CanvasRenderer({
     };
   }, [mapData, tilesetImages, renderBackground, render]);
 
-  
   return (
     <div className="relative w-full h-screen bg-sky-300 overflow-hidden">
       {isComputer &&
