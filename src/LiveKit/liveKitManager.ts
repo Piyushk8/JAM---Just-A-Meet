@@ -47,6 +47,9 @@ class LiveKitManager {
     isUnpublishing: false,
   };
 
+  private videoOperationLock: Promise<unknown> = Promise.resolve();
+  private audioOperationLock: Promise<unknown> = Promise.resolve();
+
   private localVideoTrack?: LocalVideoTrack;
   private localAudioTrack?: LocalAudioTrack;
   constructor() {
@@ -114,7 +117,6 @@ class LiveKitManager {
       return null;
     }
   }
-  private videoOperationLock: Promise<unknown> = Promise.resolve();
 
   async toggleVideo(enable: boolean): Promise<boolean> {
     return this.withVideoLock(async () => {
@@ -312,18 +314,99 @@ class LiveKitManager {
   // -------------------
   // MIC
   // -------------------
-  async toggleAudio(enable: boolean) {
-    if (!this.room) return;
+  async toggleAudio(enable: boolean): Promise<boolean> {
+    return this.withAudioLock(async () => {
+      try {
+        if (enable) {
+          await this.enableAudio();
+          return true;
+        } else {
+          await this.disableVideo();
+          return false;
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error("Audio toggle failed:", error);
+          this.audioState.lastError = error.message;
+        }
+        return !enable;
+      }
+    });
+  }
+  async enableAudio() {
+    if (!this.room || this.audioState.isPublishing || this.audioState.track) {
+      console.log(
+        "room doesnt exist or already published or publishing audio progress"
+      );
+    }
+    try {
+      this.audioState.isPublishing = true;
+      this.audioState.lastError = undefined;
 
-    if (enable) {
-      if (this.localAudioTrack) return; // already on
-      this.localAudioTrack = await createLocalAudioTrack();
-      await this.room.localParticipant.publishTrack(this.localAudioTrack);
-    } else {
-      if (!this.localAudioTrack) return;
-      this.room.localParticipant.unpublishTrack(this.localAudioTrack);
-      this.localAudioTrack.stop();
-      this.localAudioTrack = undefined;
+      const track = await Promise.race([
+        createLocalAudioTrack(),
+        this.createTimeoutPromise<LocalAudioTrack>(500, "toggle audio timeout"),
+      ]);
+
+      this.audioState.track = track;
+
+      await Promise.race([
+        this.room?.localParticipant.publishTrack(track),
+        this.createTimeoutPromise(5000, "Audio track publish timeout"),
+      ]);
+
+      console.log("audio successfully enabled");
+    } catch (error) {
+      if (this.audioState.track) {
+        try {
+          this.audioState.track.stop();
+        } catch (error) {
+          console.warn("error cleanup on failed enable audio");
+        } finally {
+          this.audioState.isPublishing = false;
+        }
+      }
+    }
+  }
+
+  private async disableAudio(): Promise<void> {
+    if (!this.audioState.track || this.audioState.isUnpublishing) {
+      console.log("No audio track to disable or disable in progress");
+      return;
+    }
+
+    this.audioState.isUnpublishing = true;
+    this.audioState.lastError = undefined;
+
+    try {
+      console.log("Disabling audio...");
+
+      if (this.room && this.room.state === ConnectionState.Connected) {
+        try {
+          await Promise.race([
+            this.room.localParticipant.unpublishTrack(this.audioState.track),
+            this.createTimeoutPromise(5000, "Audio track unpublish timeout"),
+          ]);
+          console.log("Audio track unpublished successfully");
+        } catch (unpublishError) {
+          console.warn("Failed to unpublish audio track:", unpublishError);
+        }
+      }
+
+      try {
+        this.audioState.track.stop();
+        console.log("Audio track stopped");
+      } catch (stopError) {
+        console.warn("Error stopping audio track:", stopError);
+      }
+
+      this.audioState.track = undefined;
+      console.log("Audio disabled successfully");
+    } catch (error) {
+      console.error("Failed to disable audio:", error);
+      throw error;
+    } finally {
+      this.audioState.isUnpublishing = false;
     }
   }
 
@@ -610,6 +693,12 @@ class LiveKitManager {
    */
   private async withVideoLock<T>(operation: () => Promise<T>): Promise<T> {
     this.videoOperationLock = this.videoOperationLock.then(async () => {
+      return await operation();
+    });
+    return this.videoOperationLock as Promise<T>;
+  }
+  private async withAudioLock<T>(operation: () => Promise<T>): Promise<T> {
+    this.audioOperationLock = this.audioOperationLock.then(async () => {
       return await operation();
     });
     return this.videoOperationLock as Promise<T>;

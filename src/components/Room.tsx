@@ -57,7 +57,6 @@ type RemotePlayer = {
   prevY: number;
 };
 
-
 export default function PhaserRoom() {
   const socket = useSocket();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -69,7 +68,7 @@ export default function PhaserRoom() {
     conversationId: string;
     from: string;
   } | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,27 +85,27 @@ export default function PhaserRoom() {
   );
   const dispatch = useDispatch();
 
- const handleConnectToLiveKitRoom = async () => {
-  console.log(currentUser?.id, params, isConnecting)
+  const handleConnectToLiveKitRoom = async () => {
+    console.log(currentUser?.id, params, isConnecting);
     if (!currentUser?.id || !params.roomId || isConnecting) return;
-    if(liveKitManager.room?.state == "connected") return
+    if (liveKitManager.room?.state == "connected") return;
     try {
       setIsConnecting(true);
       console.log("Connecting to LiveKit room...");
-      
+
       const token = await fetchLiveKitToken(currentUser?.id, params.roomId);
-      
+
       const room = await liveKitManager.join({
         url: LIVEKIT_URL,
         token,
         enableAudio: false,
         enableVideo: false,
       });
-      
+
       // Update Redux state to reflect initial state
       dispatch(setIsAudioEnabled(false));
       dispatch(setIsVideoEnabled(false));
-      
+
       console.log("Successfully connected to LiveKit room");
     } catch (error) {
       console.error("Failed to connect to LiveKit room:", error);
@@ -116,10 +115,10 @@ export default function PhaserRoom() {
   };
 
   useEffect(() => {
-    if (currentUser?.id &&  params.roomId) {
+    if (currentUser?.id && params.roomId) {
       handleConnectToLiveKitRoom();
     }
-    
+
     return () => {
       liveKitManager.cleanup();
     };
@@ -203,13 +202,15 @@ export default function PhaserRoom() {
     }) => {
       setInvitation({ conversationId, from });
       console.log("got invitation from", conversationId, from);
-      if (currentUser?.id) {
-        socket.emit("call:accept", {
-          conversationId,
-          targetUserId: currentUser?.id,
-        });
-        console.log("accepted");
-      }
+      // if (currentUser?.id) {
+      //   socket.emit("call:accept", {
+      //     conversationId,
+      //     targetUserId: currentUser?.id,
+      //   });
+      //   liveKitManager.syncSubscriptions([from], []);
+      //   console.log("accepted");
+      // }
+      
     };
     const handleConversationUpdated = ({
       conversationId,
@@ -249,7 +250,6 @@ export default function PhaserRoom() {
 
       liveKitManager?.cleanup();
     };
-  
   }, [socket, dispatch, liveKitManager]);
 
   const toggleAudio = async () => {
@@ -315,10 +315,10 @@ export default function PhaserRoom() {
     }
   };
 
-   const connectionStatus = isConnecting 
-    ? "Connecting..." 
-    : liveKitManager.room 
-    ? "Connected" 
+  const connectionStatus = isConnecting
+    ? "Connecting..."
+    : liveKitManager.room
+    ? "Connected"
     : "Disconnected";
 
   return (
@@ -330,7 +330,7 @@ export default function PhaserRoom() {
         style={{
           width: "300px",
           height: "200px",
-          minHeight: "120px"
+          minHeight: "120px",
         }}
       >
         {isConnecting && (
