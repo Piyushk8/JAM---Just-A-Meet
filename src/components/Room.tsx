@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import io, { Socket } from "socket.io-client";
 import "../App.css";
 import type {
-  ClientToServer,
+  ConversationUpdatePayload,
   RoomSyncPayload,
-  ServerToClient,
   User,
 } from "../types/types";
-import { LiveKitManager } from "../LiveKit/liveKitManager";
+import { liveKitManager } from "../LiveKit/liveKitManager";
 import {
   addUserInRoom,
   removeFromUsersInRoom,
@@ -20,12 +18,14 @@ import {
 import Canvas from "../Canvas/Canvas";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../Redux";
-import { getSocket } from "../socket";
 import { useSocket } from "../SocketProvider";
 import UserControls from "./roomComponents/userControls";
 import UserControlButton from "./roomComponents/userControlButton";
 import NearbyUsers from "./NearbyUserList/NearbyUserList";
-
+import { fetchLiveKitToken } from "@/LiveKit/helper";
+import { LIVEKIT_URL } from "@/lib/consts";
+import { useParams } from "react-router-dom";
+import type { Room } from "livekit-client";
 
 interface ChatMessage {
   id: string;
@@ -57,7 +57,6 @@ type RemotePlayer = {
   prevY: number;
 };
 
-const players: Map<string, RemotePlayer> = new Map();
 
 export default function PhaserRoom() {
   const socket = useSocket();
@@ -66,27 +65,65 @@ export default function PhaserRoom() {
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingUser>>(
     new Map()
   );
+  const [Invitation, setInvitation] = useState<{
+    conversationId: string;
+    from: string;
+  } | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false)
   const [showChat, setShowChat] = useState(false);
-  const [connectedPeers, setConnectedPeers] = useState<number>(0); // just number of nearby users
-  const [liveKitManager, setLiveKitManager] = useState<LiveKitManager>(
-    new LiveKitManager()
-  );
-  const roomRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {
     currentUser,
-    usersInRoom: users,
-    nearbyParticipants,
     roomId,
     isAudioEnabled,
     isVideoEnabled,
     // usersInRoom,
   } = useSelector((state: RootState) => state.roomState);
-  const { isUserControlsOpen, isleftSideBarOpen } = useSelector(
+  const params = useParams();
+  const { isUserControlsOpen } = useSelector(
     (state: RootState) => state.miscSlice
   );
   const dispatch = useDispatch();
+
+ const handleConnectToLiveKitRoom = async () => {
+  console.log(currentUser?.id, params, isConnecting)
+    if (!currentUser?.id || !params.roomId || isConnecting) return;
+    if(liveKitManager.room?.state == "connected") return
+    try {
+      setIsConnecting(true);
+      console.log("Connecting to LiveKit room...");
+      
+      const token = await fetchLiveKitToken(currentUser?.id, params.roomId);
+      
+      const room = await liveKitManager.join({
+        url: LIVEKIT_URL,
+        token,
+        enableAudio: false,
+        enableVideo: false,
+      });
+      
+      // Update Redux state to reflect initial state
+      dispatch(setIsAudioEnabled(false));
+      dispatch(setIsVideoEnabled(false));
+      
+      console.log("Successfully connected to LiveKit room");
+    } catch (error) {
+      console.error("Failed to connect to LiveKit room:", error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser?.id &&  params.roomId) {
+      handleConnectToLiveKitRoom();
+    }
+    
+    return () => {
+      liveKitManager.cleanup();
+    };
+  }, [params.roomId]);
 
   useEffect(() => {
     const handleRoomUsers = (roomUsers: User[]) => {
@@ -115,7 +152,7 @@ export default function PhaserRoom() {
         })
       );
 
-      liveKitManager?.syncSubscriptions(proximity.entered, proximity.left);
+      // liveKitManager?.syncSubscriptions(proximity.entered, proximity.left);
     };
 
     const handleUserMediaStateChanged = ({
@@ -157,6 +194,37 @@ export default function PhaserRoom() {
         return newTyping;
       });
     };
+    const handleIncomingInvite = ({
+      conversationId,
+      from,
+    }: {
+      conversationId: string;
+      from: string;
+    }) => {
+      setInvitation({ conversationId, from });
+      console.log("got invitation from", conversationId, from);
+      if (currentUser?.id) {
+        socket.emit("call:accept", {
+          conversationId,
+          targetUserId: currentUser?.id,
+        });
+        console.log("accepted");
+      }
+    };
+    const handleConversationUpdated = ({
+      conversationId,
+      joined,
+      left,
+    }: ConversationUpdatePayload) => {
+      console.log(
+        "syncing for making a connection:",
+        conversationId,
+        left,
+        joined
+      );
+      if (!conversationId) return;
+      liveKitManager.syncSubscriptions([joined], [left]);
+    };
     socket.on("connect", handleConnect);
     socket.on("user-joined", handleUserJoined);
     socket.on("user-left", handleUserLeft);
@@ -165,7 +233,8 @@ export default function PhaserRoom() {
     socket.on("message-received", handleMessageReceived);
     socket.on("message-sent", handleMessageSent);
     socket.on("user-typing", handleUserTyping);
-
+    socket.on("incoming-invite", handleIncomingInvite);
+    socket.on("conversation-updated", handleConversationUpdated);
     return () => {
       socket.off("connect", handleConnect);
       socket.off("user-joined", handleUserJoined);
@@ -175,29 +244,34 @@ export default function PhaserRoom() {
       socket.off("message-received", handleMessageReceived);
       socket.off("message-sent", handleMessageSent);
       socket.off("user-typing", handleUserTyping);
+      socket.off("conversation-updated", handleConversationUpdated);
+      socket.off("incoming-invite", handleIncomingInvite);
 
       liveKitManager?.cleanup();
     };
+  
   }, [socket, dispatch, liveKitManager]);
 
   const toggleAudio = async () => {
     if (liveKitManager) {
-      const enabled = await liveKitManager.toggleAudio();
-      dispatch(setIsAudioEnabled(enabled));
+      await liveKitManager.toggleAudio(!isAudioEnabled);
+      // const enabled = await live
+      dispatch(setIsAudioEnabled(!isAudioEnabled));
       socket?.emit("media-state-changed", {
-        isAudioEnabled: enabled,
+        isAudioEnabled: !isAudioEnabled,
         isVideoEnabled,
       });
     }
   };
 
   const toggleVideo = async () => {
+    console.log(!!liveKitManager, liveKitManager.toggleVideo);
     if (liveKitManager) {
-      const enabled = await liveKitManager.toggleVideo();
-      dispatch(setIsVideoEnabled(enabled));
+      await liveKitManager.toggleVideo(!isVideoEnabled);
+      dispatch(setIsVideoEnabled(!isVideoEnabled));
       socket?.emit("media-state-changed", {
         isAudioEnabled,
-        isVideoEnabled: enabled,
+        isVideoEnabled: !isVideoEnabled,
       });
     }
   };
@@ -240,12 +314,37 @@ export default function PhaserRoom() {
       typingTimeoutRef.current = null;
     }
   };
+
+   const connectionStatus = isConnecting 
+    ? "Connecting..." 
+    : liveKitManager.room 
+    ? "Connected" 
+    : "Disconnected";
+
   return (
     <div className="relative">
+      {/* LiveKit Container - Enhanced styling */}
       <div
         id="livekit-container"
-        className="livekit-container absolute top-0 right-0 h-16 w-20"
-      ></div>
+        className="livekit-container absolute top-0 left-0 z-40 bg-black border border-gray-300 rounded"
+        style={{
+          width: "300px",
+          height: "200px",
+          minHeight: "120px"
+        }}
+      >
+        {isConnecting && (
+          <div className="flex items-center justify-center h-full text-white">
+            Connecting to video...
+          </div>
+        )}
+        {!liveKitManager.room && !isConnecting && (
+          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            Video disconnected
+          </div>
+        )}
+      </div>
+
       {/* Media Controls */}
       <div className="absolute top-4 left-4 z-50 flex space-x-3">
         <button
@@ -266,15 +365,13 @@ export default function PhaserRoom() {
       <Canvas />
 
       {/* userControls */}
-      {isUserControlsOpen ? (
-        <UserControls />
-      ) : (
-       <UserControlButton/>
-      )}
+      {isUserControlsOpen ? <UserControls /> : <UserControlButton />}
 
-      <NearbyUsers/>
+      <NearbyUsers />
+      {/* <DrawerDemo/> */}
 
       {/* Chat Panel */}
+      {/* {Invitation && <><div className="" onClick={handleAcc}>Invitation from {Invitation.from} for {Invitation.conversationId}</div></>} */}
       {showChat && (
         <div className="chat-panel absolute right-4 bottom-4 z-50 bg-white rounded shadow-lg w-96 max-h-[60vh] flex flex-col">
           <div className="chat-header flex items-center justify-between px-4 py-2 bg-blue-500 text-white rounded-t">

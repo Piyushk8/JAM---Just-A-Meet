@@ -56,7 +56,7 @@ function App() {
         <Routes>
           <Route path="/" element={<JoinRoom />} />
           <Route path="/home" element={<JoinRoom />} />
-          <Route path="/r/id" element={<PhaserRoom />} />
+          <Route path={`/r/:roomId`} element={<PhaserRoom />} />
         </Routes>
       </BrowserRouter>
   

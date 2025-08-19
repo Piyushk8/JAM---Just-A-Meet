@@ -1,6 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { User, UserAvailabilityStatus } from "../types/types";
+import type {
+  Conversation,
+  Identity,
+  User,
+  UserAvailabilityStatus,
+} from "../types/types";
 
 interface RoomState {
   currentUser: User | null;
@@ -9,6 +14,7 @@ interface RoomState {
   isVideoEnabled: boolean;
   roomId: string | null;
   usersInRoom: Record<string, User>;
+  conversations: Record<string, Conversation> | null;
 }
 
 const initialState: RoomState = {
@@ -17,6 +23,7 @@ const initialState: RoomState = {
   isAudioEnabled: false,
   isVideoEnabled: false,
   roomId: null,
+  conversations: null,
   usersInRoom: {
     // user1: {
     //   id: "user1",
@@ -117,6 +124,11 @@ const livekitSlice = createSlice({
         };
       }
     },
+
+    addConversation: (state, action: PayloadAction<Conversation>) => {},
+    addInConversation: (state, action: PayloadAction<Identity>) => {},
+    removeFromConversation: (state, action: PayloadAction<Identity>) => {},
+    deleteConversation: (state, action: PayloadAction<string>) => {},
   },
 });
 

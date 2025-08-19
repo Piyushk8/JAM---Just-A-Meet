@@ -58,6 +58,7 @@ export type RoomSyncPayload = {
   audio: Array<{ id: string; level: number }>;
 };
 
+export type ConversationUpdatePayload = {conversationId:string,joined:string,left:string}
 export type ServerToClient = {
   "room-users": (users: User[]) => void;
   "user-joined": (user: User) => void;
@@ -71,6 +72,8 @@ export type ServerToClient = {
   "message-received": (msg: ChatMessage) => void;
   "message-sent": (msg: ChatMessage) => void;
   "user-typing": (data: TypingUser) => void;
+  "incoming-invite":(data:{conversationId:string,from:string})=>void;
+    "conversation-updated":(data:ConversationUpdatePayload)=>void;
 };
 
 export type ClientToServer = {
@@ -86,5 +89,17 @@ export type ClientToServer = {
   "send-message": (data: { message: string; type: "text" | "emoji" }) => void;
   "typing-start": () => void;
   "typing-stop": () => void;
-  "userStatusChange": (data: { status: UserAvailabilityStatus }) => void;
+  userStatusChange: (data: { status: UserAvailabilityStatus }) => void;
+  "call:invite": ({ targetUserId }: { targetUserId: string }) => void;
+  "call:accept": ({ conversationId,targetUserId }: { conversationId: string,targetUserId:string }) => void;
+
 };
+
+// userId used for live kit
+export type Identity = string;
+
+export interface Conversation {
+  members: Identity[];
+  pending: Identity[];
+  type: "video" | "audio";
+}

@@ -1,17 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import { LiveKitManager } from "../LiveKit/liveKitManager";
-import { fetchLiveKitToken } from "../LiveKit/helper";
-import type { Room } from "livekit-client";
 import {
   setCurrentUser,
-  setIsAudioEnabled,
   updateUsersInRoom,
 } from "../Redux/roomState";
 import { useDispatch } from "react-redux";
 import { useSocket } from "../SocketProvider";
-import { LIVEKIT_URL } from "../lib/consts";
 interface User {
   id: string;
   username: string;
@@ -22,14 +17,10 @@ interface User {
   isVideoEnabled?: boolean;
 }
 
-
 export const JoinRoom = () => {
   const socket = useSocket();
-  const [username, setUsername] = useState(""); // my usernmae
+  const [username, setUsername] = useState("");
   const [roomId, setRoomId] = useState("room1");
-  const [liveKitManager, setLiveKitManager] = useState<LiveKitManager>(
-    new LiveKitManager()
-  );
   const dispatch = useDispatch();
   const nav = useNavigate();
 
@@ -57,8 +48,6 @@ export const JoinRoom = () => {
             if (!res || !res.success) {
               console.log("Error in joining room");
             } else {
-              // setting users starting location and adding it to a room
-              // getting access token to access the livekit server and rooms
               if (!socket.id) return;
               dispatch(
                 setCurrentUser({
@@ -71,47 +60,10 @@ export const JoinRoom = () => {
                   isAudioEnabled: false,
                   isVideoEnabled: false,
                   sprite: "",
-                  availability:"idle"
+                  availability: "idle",
                 })
               );
-              if (!socket.id) return;
-              const token = await fetchLiveKitToken(socket.id, roomId);
-
-              // try {
-              //   const room = await liveKitManager?.join({
-              //     url: LIVEKIT_URL,
-              //     token,
-              //     // url: "ws://localhost:7880",
-              //     enableAudio: true,
-              //     enableVideo: true,
-              //   });
-              //   setIsAudioEnabled(false);
-
-              //   const attachLocalTracks = (room: Room) => {
-              //     const container =
-              //       document.getElementById("livekit-container");
-              //     if (!container) return;
-
-              //     // Clear any old video
-              //     container.innerHTML = "";
-
-              //     room.localParticipant
-              //       .getTrackPublications()
-              //       .forEach((pub) => {
-              //         if (pub.track) {
-              //           const el = pub.track.attach();
-              //           el.muted = true; // prevent echo
-              //           el.autoplay = true;
-              //           container.appendChild(el);
-              //         }
-              //       });
-              //   };
-              //   attachLocalTracks(room);
-              // } catch (err) {
-              //   console.error("LiveKit connection failed:", err);
-              // }
-
-              nav("/r/id");
+              nav(`/r/${roomId}`);
             }
           } catch (error) {
             console.log("error joinig", error);

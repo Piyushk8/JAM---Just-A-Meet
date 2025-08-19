@@ -31,7 +31,7 @@ export class InteractablesMapBuilder {
       chunkSize: this.CHUNK_SIZE,
     };
 
-    console.log("🔧 Building interactables map...");
+    // console.log("🔧 Building interactables map...");
 
     // Process all layers
     mapData.layers.forEach((layer) => {
@@ -42,9 +42,9 @@ export class InteractablesMapBuilder {
       }
     });
 
-    console.log(
-      `✅ Built interactables map with ${interactablesMap.objects.size} objects`
-    );
+    // console.log(
+    //   `✅ Built interactables map with ${interactablesMap.objects.size} objects`
+    // );
     return interactablesMap;
   }
 
@@ -56,9 +56,9 @@ export class InteractablesMapBuilder {
     const layerType = this.getInteractableType(layer.name);
     if (!layerType) return;
 
-    console.log(
-      `📦 Processing object layer: ${layer.name} (type: ${layerType})`
-    );
+    // console.log(
+    //   `📦 Processing object layer: ${layer.name} (type: ${layerType})`
+    // );
 
     layer.objects.forEach((obj) => {
       if (!obj.x || !obj.y || !obj.width || !obj.height) return;
@@ -113,7 +113,7 @@ export class InteractablesMapBuilder {
     const layerType = this.getInteractableType(layer.name);
     if (!layerType) return;
 
-    console.log(`🎯 Processing tile layer: ${layer.name} (type: ${layerType})`);
+    // console.log(`🎯 Processing tile layer: ${layer.name} (type: ${layerType})`);
 
     // Group adjacent tiles into objects
     const processedTiles = new Set<string>();
