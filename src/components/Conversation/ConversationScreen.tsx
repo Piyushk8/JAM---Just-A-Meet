@@ -1,0 +1,538 @@
+import { useState, useEffect, useRef } from "react";
+import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { useSocket } from "@/SocketProvider";
+import type { Conversation, User } from "@/types/types";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "@/Redux";
+import {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Phone,
+  PhoneOff,
+  Settings,
+  MoreVertical,
+  Users,
+  MessageSquare,
+  Share,
+  Grid3X3,
+} from "lucide-react";
+import {
+  addConversation,
+  addUserInConversation,
+  pendingToMemberInConversation,
+} from "@/Redux/misc";
+import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
+import { liveKitManager } from "@/LiveKit/liveKitManager";
+import { ParticipantVideo } from "./ParticipantVideo";
+import { useLiveKit } from "@/LiveKit/LiveKitContext/Context";
+
+interface CallParticipant extends User {
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+  isLocal?: boolean;
+}
+
+export default function CallScreen() {
+  const [status, setStatus] = useState<
+    "pending" | "ongoing" | "ended" | "joining"
+  >("pending");
+  const [participants, setParticipants] = useState<CallParticipant[]>([]);
+  const [localVideo, setLocalVideo] = useState(true);
+  const [localAudio, setLocalAudio] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [callDuration, setCallDuration] = useState(0);
+
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const callStartTime = useRef<number>(0);
+
+  const { OnGoingConversations, isCallScreenOpen } = useSelector(
+    (state: RootState) => state.miscSlice
+  );
+  useEffect(() => {
+    if (OnGoingConversations?.status === "ongoing" && status === "pending") {
+      setStatus("joining");
+    }
+  }, [OnGoingConversations?.status, status]);
+
+  const { usersInRoom, currentUser } = useSelector(
+    (state: RootState) => state.roomState
+  );
+  const dispatch = useDispatch();
+  const socket = useSocket();
+
+  // console.log(participantsWithTracks);
+  // console.log(participants);
+
+  const { participantsWithTracks, setParticipantsWithTracks } = useLiveKit();
+  // Call duration timer
+  useEffect(() => {
+    if (status === "ongoing" && callStartTime.current === 0) {
+      callStartTime.current = Date.now();
+    }
+
+    const interval = setInterval(() => {
+      if (status === "ongoing" && callStartTime.current > 0) {
+        setCallDuration(
+          Math.floor((Date.now() - callStartTime.current) / 1000)
+        );
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [status]);
+  // Auto-hide controls
+  useEffect(() => {
+    if (status === "ongoing") {
+      const timer = setTimeout(() => setShowControls(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showControls, status]);
+
+  // Initialize local video preview
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+
+    const initializePreview = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Could not access camera/mic:", err);
+      }
+    };
+    if (status === "pending" || status === "joining") {
+      initializePreview();
+    }
+    return () => {
+      // Cleanup streams when component unmounts
+      if (localVideoRef.current?.srcObject) {
+        const stream = localVideoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [status]);
+
+  useEffect(() => {
+    if (!OnGoingConversations) return;
+
+    const { conversationId, members } = OnGoingConversations;
+
+    // Set initial participants
+    // const callParticipants = members
+    //   .map((id: string) => {
+    //     const user = usersInRoom[id];
+    //     return {
+    //       ...user,
+    //       isVideoEnabled: true,
+    //       isAudioEnabled: true,
+    //       isLocal: id === currentUser?.id,
+    //     };
+    //   })
+    //   .filter(Boolean);
+
+    // setParticipants(callParticipants);
+    //@ts-ignore
+    const handleAccepted = ({ conversationId, targetUserId }) => {
+      if (OnGoingConversations.conversationId == conversationId) {
+        console.log(
+          "🔍 Before sync - participantsWithTracks size:",
+          participantsWithTracks.size
+        );
+
+        liveKitManager.syncSubscriptions([targetUserId], []);
+        dispatch(addUserInConversation(targetUserId));
+        dispatch(pendingToMemberInConversation(targetUserId));
+        // Add delay to check later
+        setTimeout(() => {
+          console.log(
+            "🔍 After sync - participantsWithTracks size:",
+            participantsWithTracks.size
+          );
+        }, 2000);
+
+        setStatus("ongoing");
+      }
+    };
+
+    const handleDeclined = (data: { conversationId: string }) => {
+      if (data.conversationId === conversationId) {
+        setStatus("ended");
+      }
+    };
+
+    const handleParticipantJoined = (data: {
+      userId: string;
+      conversationId: string;
+    }) => {
+      if (data.conversationId === conversationId) {
+        const user = usersInRoom[data.userId];
+        if (user && !participants.find((p) => p.id === data.userId)) {
+          setParticipants((prev) => [
+            ...prev,
+            {
+              ...user,
+              isVideoEnabled: true,
+              isAudioEnabled: true,
+            },
+          ]);
+        }
+      }
+    };
+
+    const handleMediaStateChange = (data: {
+      userId: string;
+      isVideoEnabled: boolean;
+      isAudioEnabled: boolean;
+    }) => {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === data.userId
+            ? {
+                ...p,
+                isVideoEnabled: data.isVideoEnabled,
+                isAudioEnabled: data.isAudioEnabled,
+              }
+            : p
+        )
+      );
+    };
+
+    socket.on("call-accepted-response", handleAccepted);
+    socket.on("call-declined", handleDeclined);
+    // socket.on("participant-joined", handleParticipantJoined);
+    socket.on("user-media-state-changed", handleMediaStateChange);
+
+    return () => {
+      socket.off("call-declined", handleDeclined);
+      socket.off("call-accepted-response", handleAccepted);
+      //   socket.off("participant-joined", handleParticipantJoined);
+      socket.off("user-media-state-changed", handleMediaStateChange);
+    };
+  }, [OnGoingConversations, socket, usersInRoom, currentUser]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const toggleLocalVideo = async () => {
+    const enabled = !localVideo;
+    setLocalVideo(enabled);
+    await liveKitManager.toggleVideo(enabled);
+    socket.emit("media-state-changed", {
+      isVideoEnabled: enabled,
+      isAudioEnabled: localAudio,
+    });
+  };
+
+  const toggleLocalAudio = async () => {
+    const enabled = !localAudio;
+    setLocalAudio(enabled);
+    await liveKitManager.toggleAudio(enabled);
+    socket.emit("media-state-changed", {
+      isVideoEnabled: localVideo,
+      isAudioEnabled: enabled,
+    });
+  };
+
+  const endCall = () => {
+    socket.emit("leave-conversation", {
+      conversationId: OnGoingConversations!.conversationId,
+    });
+    setStatus("ended");
+  };
+
+  const getGridClass = (participantCount: number) => {
+    if (participantCount === 1) return "grid-cols-1";
+    if (participantCount === 2) return "grid-cols-2";
+    if (participantCount <= 4) return "grid-cols-2";
+    if (participantCount <= 9) return "grid-cols-3";
+    return "grid-cols-4";
+  };
+
+  if (status === "pending") {
+    return (
+      <motion.div
+        className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div className="bg-white rounded-2xl shadow-xl p-6 w-[500px] max-w-full">
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-64 h-48 bg-gray-900 rounded-lg overflow-hidden">
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div className="text-center">
+              <h3 className="text-xl font-semibold mb-2">
+                {status === "pending" && "Starting call..."}
+              </h3>
+              <p className="text-gray-600">"Waiting for others to join"</p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant={localVideo ? "default" : "destructive"}
+                size="icon"
+                onClick={toggleLocalVideo}
+              >
+                {localVideo ? <Video /> : <VideoOff />}
+              </Button>
+
+              <Button
+                variant={localAudio ? "default" : "destructive"}
+                size="icon"
+                onClick={toggleLocalAudio}
+              >
+                {localAudio ? <Mic /> : <MicOff />}
+              </Button>
+
+              <Button variant="destructive" onClick={endCall}>
+                <PhoneOff className="mr-2" /> Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (status == "joining") {
+    return (
+      <>
+        <motion.div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-[500px] max-w-full">
+            <div className="flex flex-col items-center gap-6">
+              <div className="w-64 h-48 bg-gray-900 rounded-lg overflow-hidden">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-xl font-semibold mb-2">Joining...</h3>
+                <p className="text-gray-600">Connecting to call</p>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant={localVideo ? "default" : "destructive"}
+                  size="icon"
+                  onClick={toggleLocalVideo}
+                >
+                  {localVideo ? <Video /> : <VideoOff />}
+                </Button>
+
+                <Button
+                  variant={localAudio ? "default" : "destructive"}
+                  size="icon"
+                  onClick={toggleLocalAudio}
+                >
+                  {localAudio ? <Mic /> : <MicOff />}
+                </Button>
+
+                {status === "joining" ? (
+                  <Button
+                    variant="default"
+                    onClick={() => setStatus("ongoing")}
+                  >
+                    Join Call
+                  </Button>
+                ) : (
+                  <Button variant="destructive" onClick={endCall}>
+                    <PhoneOff className="mr-2" /> Cancel
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </>
+    );
+  }
+
+  if (status === "ongoing") {
+    return (
+      <motion.div
+        className="fixed inset-0 bg-black z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        onMouseMove={() => setShowControls(true)}
+      >
+        {/* Main video grid */}
+        <div className="h-full p-4">
+          <div
+            className={`grid ${getGridClass(
+              participantsWithTracks.size
+            )} gap-2 h-full`}
+          >
+            {OnGoingConversations?.members.map((memberId) => {
+              const tracksAndPublications =
+                participantsWithTracks.get(memberId);
+              const user = usersInRoom[memberId];
+              if (!tracksAndPublications)
+                return <>`{memberId}no data for this member`</>;
+
+              return (
+                <ParticipantVideo
+                  username={user?.username}
+                  isLocal={user?.id == currentUser?.id}
+                  publications={tracksAndPublications}
+                  key={memberId}
+                />
+              );
+            })}
+            {/* <div id="livekit-container"></div> */}
+          </div>
+        </div>
+
+        {/* Top bar */}
+        <motion.div
+          className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/50 to-transparent p-4"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: showControls ? 1 : 0 }}
+        >
+          <div className="flex justify-between items-center text-white">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-semibold">Video Call</h2>
+              <span className="text-sm opacity-75">
+                {formatDuration(callDuration)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="text-white">
+                <Users />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-white">
+                <MessageSquare />
+              </Button>
+              <Button variant="ghost" size="icon" className="text-white">
+                <MoreVertical />
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Bottom controls */}
+        <motion.div
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-6"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: showControls ? 1 : 0 }}
+        >
+          <div className="flex justify-center items-center gap-4">
+            <Button
+              variant={localAudio ? "secondary" : "destructive"}
+              size="lg"
+              className="rounded-full"
+              onClick={toggleLocalAudio}
+            >
+              {localAudio ? <Mic /> : <MicOff />}
+            </Button>
+
+            <Button
+              variant={localVideo ? "secondary" : "destructive"}
+              size="lg"
+              className="rounded-full"
+              onClick={toggleLocalVideo}
+            >
+              {localVideo ? <Video /> : <VideoOff />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="lg"
+              className="rounded-full text-white"
+            >
+              <Share />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="lg"
+              className="rounded-full text-white"
+            >
+              <Grid3X3 />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="lg"
+              className="rounded-full text-white"
+            >
+              <Settings />
+            </Button>
+
+            <Button
+              variant="destructive"
+              size="lg"
+              className="rounded-full"
+              onClick={endCall}
+            >
+              <PhoneOff />
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Participants count */}
+        <div className="absolute top-20 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+          {OnGoingConversations?.members.length} participant
+          {OnGoingConversations?.members.length !== 1 ? "s" : ""}
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (status === "ended") {
+    return (
+      <motion.div
+        className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-[400px] max-w-full text-center">
+          <div className="mb-6">
+            <PhoneOff className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Call Ended</h3>
+            <p className="text-gray-600">
+              Call duration: {formatDuration(callDuration)}
+            </p>
+          </div>
+
+          <Button onClick={() => window.location.reload()} className="w-full">
+            Return to Room
+          </Button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return null;
+}

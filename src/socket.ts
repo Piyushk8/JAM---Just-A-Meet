@@ -1,8 +1,9 @@
 import { io, type Socket } from "socket.io-client";
 import type { ClientToServer, ServerToClient } from "./types/types";
+import { SERVER_URL } from "./lib/consts";
 
 export type SocketType = Socket<ServerToClient , ClientToServer>;
-let SERVER_URL = "http://localhost:3000";
+
 let socket: SocketType | null = null;
 
 export const getSocket = (): SocketType => {

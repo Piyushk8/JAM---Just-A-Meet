@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Redux";
 import {
   ChevronUp,
@@ -12,6 +12,8 @@ import {
   LucidePhoneCall,
 } from "lucide-react";
 import { useSocket } from "@/SocketProvider";
+import type { Conversation } from "@/types/types";
+import { addConversation, openCallScreen } from "@/Redux/misc";
 
 interface NearbyUsersProps {}
 
@@ -20,11 +22,13 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
   const { nearbyParticipants, usersInRoom } = useSelector(
     (state: RootState) => state.roomState
   );
+  const dispatch = useDispatch();
   const [isOpen, setIsOpen] = useState(false);
 
   const nearbyUsers = Object.values(usersInRoom).filter((u) =>
     nearbyParticipants.includes(u.id)
   );
+
   const handleInviteOnCallWithId = (id: string) => {
     return (event: React.MouseEvent) => {
       handleInviteOnCall(id);
@@ -33,8 +37,26 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
   const handleInviteOnCall = (userId: string) => {
     if (!userId) return;
 
-    socket.emit("call:invite", { targetUserId: userId });
-    console.log("invitation sent from FE")
+    socket.emit(
+      "call:invite",
+      { targetUserId: userId },
+      (res: { success: boolean; conversation: Conversation }) => {
+        const { conversation } = res;
+        if (!conversation) return;
+        dispatch(
+          addConversation({
+            conversationId: conversation.conversationId,
+            createdAt: conversation.createdAt,
+            members: conversation.members,
+            pending: conversation.pending,
+            creator: conversation.creator,
+            status:"pending"
+          })
+        );
+        dispatch(openCallScreen());
+      }
+    );
+    console.log("invitation sent from FE");
   };
   const statusColors: Record<string, string> = {
     available: "bg-green-500",

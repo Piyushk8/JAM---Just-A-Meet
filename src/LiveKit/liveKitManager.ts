@@ -16,6 +16,12 @@ import {
   ConnectionState,
 } from "livekit-client";
 
+import { setLogLevel, LogLevel } from "livekit-client";
+import type { ParticipantTracks } from "./LiveKitContext/Context";
+
+// options: trace | debug | info | warn | error | off
+setLogLevel(LogLevel.warn);
+
 type ManagerState =
   | "connected"
   | "connecting"
@@ -50,12 +56,22 @@ class LiveKitManager {
   private videoOperationLock: Promise<unknown> = Promise.resolve();
   private audioOperationLock: Promise<unknown> = Promise.resolve();
 
-  private localVideoTrack?: LocalVideoTrack;
-  private localAudioTrack?: LocalAudioTrack;
+  private trackSubscribedCallbacks: ((
+    participantId: string,
+    track: RemoteTrack,
+    publication: RemoteTrackPublication
+  ) => void)[] = [];
+  private trackUnsubscribedCallbacks: ((
+    participantId: string,
+    track: RemoteTrack,
+    publication: RemoteTrackPublication
+  ) => void)[] = [];
+
   constructor() {
     this.subscribedToTrackIDs = new Set<string>();
     this.pendingToSubscribeToTrackIDs = new Set<string>();
   }
+
   public static getInstance(): LiveKitManager {
     if (LiveKitManager.instance) return LiveKitManager.instance;
     LiveKitManager.instance = new LiveKitManager();
@@ -113,20 +129,13 @@ class LiveKitManager {
     } catch (error) {
       console.log("error joining room");
       this.managerState = "failed";
-      //? this.forceDisconnect()
+      this.forceDisconnect();
       return null;
     }
   }
 
   async toggleVideo(enable: boolean): Promise<boolean> {
     return this.withVideoLock(async () => {
-      // if (!this.canPerformOperation()) {
-      //   console.warn(
-      //     "Cannot toggle video: not connected or operation in progress"
-      //   );
-      //   return !enable;
-      // }
-
       try {
         if (enable) {
           await this.enableVideo();
@@ -173,8 +182,8 @@ class LiveKitManager {
       console.log("Video track created successfully");
 
       console.log("Publishing video track...");
-      this.room.localParticipant.publishTrack(track),
-        console.log("Video track published successfully");
+      await this.room.localParticipant.publishTrack(track);
+      console.log("Video track published successfully");
 
       await this.createVideoPreview(track);
       console.log("Video preview created");
@@ -231,8 +240,10 @@ class LiveKitManager {
         if (this.room && this.room.state === ConnectionState.Connected) {
           try {
             console.log("Unpublishing video track...");
-            this.room.localParticipant.unpublishTrack(this.videoState.track),
-              console.log("Video track unpublished successfully");
+            await this.room.localParticipant.unpublishTrack(
+              this.videoState.track
+            );
+            console.log("Video track unpublished successfully");
           } catch (unpublishError) {
             console.warn("Failed to unpublish video track:", unpublishError);
           }
@@ -321,7 +332,7 @@ class LiveKitManager {
           await this.enableAudio();
           return true;
         } else {
-          await this.disableVideo();
+          await this.disableAudio();
           return false;
         }
       } catch (error) {
@@ -333,19 +344,25 @@ class LiveKitManager {
       }
     });
   }
+
   async enableAudio() {
     if (!this.room || this.audioState.isPublishing || this.audioState.track) {
       console.log(
         "room doesnt exist or already published or publishing audio progress"
       );
+      return; // FIXED: Added return statement
     }
+
     try {
       this.audioState.isPublishing = true;
       this.audioState.lastError = undefined;
 
       const track = await Promise.race([
         createLocalAudioTrack(),
-        this.createTimeoutPromise<LocalAudioTrack>(500, "toggle audio timeout"),
+        this.createTimeoutPromise<LocalAudioTrack>(
+          5000,
+          "toggle audio timeout"
+        ),
       ]);
 
       this.audioState.track = track;
@@ -357,15 +374,18 @@ class LiveKitManager {
 
       console.log("audio successfully enabled");
     } catch (error) {
+      console.error("Failed to enable audio:", error);
       if (this.audioState.track) {
         try {
           this.audioState.track.stop();
-        } catch (error) {
-          console.warn("error cleanup on failed enable audio");
-        } finally {
-          this.audioState.isPublishing = false;
+        } catch (cleanupError) {
+          console.warn("error cleanup on failed enable audio", cleanupError);
         }
+        this.audioState.track = undefined;
       }
+      throw error;
+    } finally {
+      this.audioState.isPublishing = false;
     }
   }
 
@@ -414,11 +434,9 @@ class LiveKitManager {
     console.log("Starting LiveKit cleanup...");
     this.managerState = "disconnected";
 
-    // Wait for any pending operations to complete or timeout
     try {
       await Promise.race([
-        //Add in audio operation too
-        Promise.all([this.videoOperationLock]),
+        Promise.all([this.videoOperationLock, this.audioOperationLock]),
         this.createTimeoutPromise(3000, "Cleanup timeout"),
       ]);
     } catch (error) {
@@ -478,56 +496,167 @@ class LiveKitManager {
 
   syncSubscriptions(entered: string[], left: string[]) {
     console.log("thisroom", this.room);
-    if (!this.room) return;
+    if (!this.room || this.room.state !== ConnectionState.Connected) {
+      console.warn("Cannot sync subscriptions: room not connected");
+      return;
+    }
     console.log("connecting users in livekit", entered, left);
     for (const p of entered) this.subscribeIdentity(p);
     for (const p of left) this.unSubscribeIdentity(p);
-    // console.log("sync end")
   }
 
   //  This first checks for identity in the room in case it has not joined in and sends to pending queue
+  // private subscribeIdentity(identity: string) {
+  //   if (!this.room || !identity) return;
+  //   console.log("subscribing to this identity", identity);
+  //   if (this.subscribedToTrackIDs.has(identity)) {
+  //     console.log("Already subscribed to", identity);
+  //     return;
+  //   }
+  //   const p = this.findRemote(identity);
+  //   console.log("new remote user added", p);
+  //   if (!p) {
+  //     console.log("Participant not found, adding to pending queue:", identity);
+  //     this.pendingToSubscribeToTrackIDs.add(identity);
+  //     return;
+  //   }
+
+  //   //gets the Track Publications (audio,video etc) and attach the subscription to all of them
+  //   p.getTrackPublications().forEach((pub) => {
+  //     try {
+  //       (pub as RemoteTrackPublication).setSubscribed(true);
+  //       console.log(`Subscribed to ${pub.kind} track from ${identity}`);
+  //     } catch (error) {
+  //       console.warn(`Failed to subscribe to track from ${identity}:`, error);
+  //     }
+  //   });
+  //   // adds to subscription set for tracking
+  //   this.subscribedToTrackIDs.add(identity);
+  // }
+
   private subscribeIdentity(identity: string) {
     if (!this.room || !identity) return;
-    console.log("subscribing to this identity", identity);
-    if (this.subscribedToTrackIDs.has(identity)) return;
+    console.log("🔄 Subscribing to identity:", identity);
+
     const p = this.findRemote(identity);
-    console.log("new remote user added", p);
+    console.log(
+      "🔍 Remote participant found:",
+      p?.identity,
+      "tracks:",
+      p?.getTrackPublications().length
+    );
+
     if (!p) {
+      console.log(
+        "⏳ Participant not found, adding to pending queue:",
+        identity
+      );
       this.pendingToSubscribeToTrackIDs.add(identity);
       return;
     }
 
-    //gets the Track Publications (audio,video etc) and attach the subscription to all of them
-    p.getTrackPublications().forEach((pub) => {
-      (pub as RemoteTrackPublication).setSubscribed(true);
+    // Get all track publications and subscribe
+    const publications = p.getTrackPublications();
+    if (publications.length == 0)
+      this.pendingToSubscribeToTrackIDs.add(identity);
+    console.log(`📹 Found ${publications.length} publications for ${identity}`);
+
+    publications.forEach((pub) => {
+      try {
+        if ((pub as RemoteTrackPublication).isSubscribed) return;
+        console.log(`🎯 Subscribing to ${pub.kind} track from ${identity}`);
+        (pub as RemoteTrackPublication).setSubscribed(true);
+        console.log(
+          `✅ Successfully subscribed to ${pub.kind} from ${identity}`
+        );
+      } catch (error) {
+        console.error(
+          `❌ Failed to subscribe to ${pub.kind} from ${identity}:`,
+          error
+        );
+      }
     });
-    // adds to subscription set for tracking
+
     this.subscribedToTrackIDs.add(identity);
   }
+  // Add this method to LiveKitManager
+  public forceRefreshAllSubscriptions() {
+    if (!this.room) {
+      console.warn("No room available for refresh");
+      return;
+    }
+
+    console.log("🔄 Force refreshing all subscriptions");
+    console.log("Remote participants:", this.room.remoteParticipants.size);
+
+    // Re-subscribe to all current remote participants
+    this.room.remoteParticipants.forEach((participant) => {
+      console.log(`🔄 Refreshing subscription for ${participant.identity}`);
+
+      participant.getTrackPublications().forEach((pub) => {
+        try {
+          console.log(
+            `🎯 Re-subscribing to ${pub.kind} from ${participant.identity}`
+          );
+          (pub as RemoteTrackPublication).setSubscribed(true);
+        } catch (error) {
+          console.error(`❌ Failed to re-subscribe to ${pub.kind}:`, error);
+        }
+      });
+
+      this.subscribedToTrackIDs.add(participant.identity);
+    });
+  }
+
   //  This first checks for identity in the room in case it has not joined in and sends to pending queue
   private unSubscribeIdentity(identity: string) {
     if (!this.room || !identity) return;
-    if (!this.subscribedToTrackIDs.has(identity)) return;
+    console.log("unsubscribing from this identity", identity);
+    if (!this.subscribedToTrackIDs.has(identity)) {
+      console.log("Not subscribed to", identity);
+      return;
+    }
     const p = this.findRemote(identity);
     if (!p) {
+      console.log(
+        "Participant not found, removing from pending queue:",
+        identity
+      );
       this.pendingToSubscribeToTrackIDs.delete(identity);
+      this.subscribedToTrackIDs.delete(identity); // FIXED: Also remove from subscribed set
       return;
     }
     p.getTrackPublications().forEach((pub) => {
-      (pub as RemoteTrackPublication).setSubscribed(false);
+      try {
+        (pub as RemoteTrackPublication).setSubscribed(false);
+        console.log(`Unsubscribed from ${pub.kind} track from ${identity}`);
+      } catch (error) {
+        console.warn(
+          `Failed to unsubscribe from track from ${identity}:`,
+          error
+        );
+      }
     });
     this.subscribedToTrackIDs.delete(identity);
   }
 
-  // just llooks for users(remote) in the room
+  // just looks for users(remote) in the room - FIXED: Better error handling
   private findRemote(identity: string): RemoteParticipant | undefined {
-    if (!this.room || !identity) return; // Only return if room or identity is missing
+    if (!this.room || !identity) {
+      console.warn("Cannot find remote: room or identity missing");
+      return undefined;
+    }
 
     // checks for this identity in all participants in the room
     for (const p of this.room.remoteParticipants.values()) {
-      console.log("all parts", p, identity);
-      if (p.identity == identity) return p;
+      console.log("checking participant", p.identity, "against", identity);
+      if (p.identity === identity) {
+        // FIXED: Use strict equality
+        console.log("Found matching participant:", p.identity);
+        return p;
+      }
     }
+    console.log("No matching participant found for:", identity);
     return undefined;
   }
 
@@ -545,55 +674,88 @@ class LiveKitManager {
       .on(
         RoomEvent.AudioPlaybackStatusChanged,
         this.handleAudioPlaybackStatusChanged
-      );
-    this.room.on(
-      RoomEvent.TrackSubscribed,
-      (track, publication, participant) => {
-        console.log(
-          "[LiveKit] Subscribed to track:",
-          track.kind,
-          "from",
-          participant.identity
-        );
-      }
-    );
-
-    this.room.on(
-      RoomEvent.TrackUnsubscribed,
-      (track, publication, participant) => {
-        console.log(
-          "[LiveKit] Unsubscribed from track:",
-          track.kind,
-          "from",
-          participant.identity
-        );
-      }
-    );
+      )
+      .on(RoomEvent.ParticipantDisconnected, this.handleParticipantDisconnected)
+      .on(RoomEvent.TrackPublished, this.handleTrackPublished);
   }
+
+  private handleTrackPublished = (
+    RemoteTrackPublication: RemoteTrackPublication,
+    remoteParticipant: RemoteParticipant
+  ) => {
+    if (this.room || this.managerState === "connected") {
+      if (this.subscribedToTrackIDs.has(remoteParticipant.identity))
+        this.subscribeIdentity(remoteParticipant.identity);
+    }
+  };
 
   // ---- event handlers ----
   //  This subs to users who are now connected to us first checks the pending queue and subs then delete from the queue
   private handleParticipantConnected = (p: RemoteParticipant) => {
     if (!this.room) return;
 
+    console.log("Participant connected:", p.identity);
+
     if (this.pendingToSubscribeToTrackIDs.has(p.identity)) {
+      console.log("Processing pending subscription for:", p.identity);
       this.subscribedToTrackIDs.add(p.identity);
-      p.getTrackPublications().forEach((pub) =>
-        (pub as RemoteTrackPublication).setSubscribed(true)
-      );
+      p.getTrackPublications().forEach((pub) => {
+        try {
+          (pub as RemoteTrackPublication).setSubscribed(true);
+          console.log(
+            `Auto-subscribed to ${pub.kind} track from ${p.identity}`
+          );
+        } catch (error) {
+          console.warn(
+            `Failed to auto-subscribe to track from ${p.identity}:`,
+            error
+          );
+        }
+      });
       this.pendingToSubscribeToTrackIDs.delete(p.identity);
     }
   };
 
-  // this allows us to attach the video and audio components to our screen
+  private handleParticipantDisconnected = (p: RemoteParticipant) => {
+    console.log("Participant disconnected:", p.identity);
+    this.subscribedToTrackIDs.delete(p.identity);
+    this.pendingToSubscribeToTrackIDs.delete(p.identity);
+  };
+
+  onTrackSubscribed(
+    cb: (
+      participantId: string,
+      track: RemoteTrack,
+      publication: RemoteTrackPublication
+    ) => void
+  ) {
+    this.trackSubscribedCallbacks.push(cb);
+  }
+
+  onTrackUnsubscribed(
+    cb: (
+      participantId: string,
+      track: RemoteTrack,
+      publication: RemoteTrackPublication
+    ) => void
+  ) {
+    this.trackUnsubscribedCallbacks.push(cb);
+  }
+
+  //This listens to tracks subscriptions and send those tracks to our react state to render using callbacks passed
   private handleTrackSubscribed = (
     track: RemoteTrack,
     publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ) => {
     if (track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio) {
-      const el = track.attach();
-      document.getElementById("livekit-container")?.appendChild(el);
+      this.trackSubscribedCallbacks.forEach((cb) => {
+        try {
+          cb(participant.identity, track, publication);
+        } catch (error) {
+          console.warn("Error in track subscribed callback:", error);
+        }
+      });
     }
   };
 
@@ -602,7 +764,16 @@ class LiveKitManager {
     publication: RemoteTrackPublication,
     participant: RemoteParticipant
   ) => {
-    track.detach().forEach((el) => el.remove());
+    console.log(
+      `Track unsubscribed: ${track.kind} from ${participant.identity}`
+    );
+    this.trackUnsubscribedCallbacks.forEach((cb) => {
+      try {
+        cb(participant.identity, track, publication);
+      } catch (error) {
+        console.warn("Error in track unsubscribed callback:", error);
+      }
+    });
   };
 
   private handleLocalTrackUnpublished = (
@@ -618,6 +789,9 @@ class LiveKitManager {
 
   private handleDisconnected = () => {
     console.log("disconnected from room");
+    this.managerState = "disconnected";
+    this.subscribedToTrackIDs.clear();
+    this.pendingToSubscribeToTrackIDs.clear();
   };
 
   private handleAudioPlaybackStatusChanged = () => {
@@ -674,7 +848,6 @@ class LiveKitManager {
 
   private clearContainer(container: HTMLElement): void {
     try {
-      // Only clear local video, preserve remote participants
       const localVideo = container.querySelector("#local-video");
       if (localVideo) {
         localVideo.remove();
@@ -685,11 +858,10 @@ class LiveKitManager {
   }
 
   /**
-   *
-   * @param operation utitlity function that just adds a chain of promises to the 'videoOperationLock'
-   * as multiple operation triggered can be challeng9ing to handle so this handles each new call after previous one finishes
+   * @param operation utility function that just adds a chain of promises to the 'videoOperationLock'
+   * as multiple operation triggered can be challenging to handle so this handles each new call after previous one finishes
    * (otherwise causes concurrency issues between existing operations)
-   * @returns Promise<T> - return promise of same ooperation passed
+   * @returns Promise<T> - return promise of same operation passed
    */
   private async withVideoLock<T>(operation: () => Promise<T>): Promise<T> {
     this.videoOperationLock = this.videoOperationLock.then(async () => {
@@ -701,7 +873,7 @@ class LiveKitManager {
     this.audioOperationLock = this.audioOperationLock.then(async () => {
       return await operation();
     });
-    return this.videoOperationLock as Promise<T>;
+    return this.audioOperationLock as Promise<T>;
   }
 }
 

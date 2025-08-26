@@ -11,12 +11,18 @@ export default function Canvas() {
   const [characters, setCharacters] = useState<HTMLImageElement[] | null>();
 
   //This loads map data
-  useEffect(() => {
-    fetch(`${"http://localhost:5173"}/assets/map/map.json`)
-      .then((res) =>{
-        return res.json()})
-      .then(setMapData);
+  // useEffect(() => {
+  //   fetch(`${"http://localhost:5173"}/assets/map/map.json`)
+  //     .then((res) =>{
+  //       return res.json()})
+  //     .then(setMapData);
 
+  // }, []);
+
+  useEffect(() => {
+    fetch("/assets/map/map.json") // relative to same origin
+      .then((res) => res.json())
+      .then(setMapData);
   }, []);
 
   // this loads tiledsets

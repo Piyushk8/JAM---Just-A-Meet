@@ -58,7 +58,11 @@ export type RoomSyncPayload = {
   audio: Array<{ id: string; level: number }>;
 };
 
-export type ConversationUpdatePayload = {conversationId:string,joined:string,left:string}
+export type ConversationUpdatePayload = {
+  conversationId: string;
+  joined: string;
+  left: string;
+};
 export type ServerToClient = {
   "room-users": (users: User[]) => void;
   "user-joined": (user: User) => void;
@@ -72,8 +76,21 @@ export type ServerToClient = {
   "message-received": (msg: ChatMessage) => void;
   "message-sent": (msg: ChatMessage) => void;
   "user-typing": (data: TypingUser) => void;
-  "incoming-invite":(data:{conversationId:string,from:string})=>void;
-    "conversation-updated":(data:ConversationUpdatePayload)=>void;
+  "incoming-invite": (data: {
+    conversationId: string;
+    from: string;
+    members: string[];
+  }) => void;
+  "conversation-updated": (data: ConversationUpdatePayload) => void;
+  "call-declined": (data: {
+    conversationId: string;
+    userDeclined: string;
+  }) => void;
+"call-accepted-response": (data: {
+    conversationId: string;
+    targetUserId: string;
+    conversation?: any;
+  }) => void;
 };
 
 export type ClientToServer = {
@@ -90,16 +107,50 @@ export type ClientToServer = {
   "typing-start": () => void;
   "typing-stop": () => void;
   userStatusChange: (data: { status: UserAvailabilityStatus }) => void;
-  "call:invite": ({ targetUserId }: { targetUserId: string }) => void;
-  "call:accept": ({ conversationId,targetUserId }: { conversationId: string,targetUserId:string }) => void;
+  "call:invite": (
+    { targetUserId }: { targetUserId: string },
+    callback: (res: { success: boolean; conversation: Conversation }) => void
+  ) => void;
+  "call:accept": (
+    {
+      conversationId,
+      targetUserId,
+      from,
+    }: {
+      conversationId: string;
+      from: string;
+      targetUserId: string;
+    },
+    cb: (res: {
+      isConversationActive: boolean;
+      conversation: Conversation | null;
+    }) => void
+  ) => void;
+  "call:decline": ({
+    conversationId,
+    userDeclined,
+    userThatInvited,
+  }: {
+    conversationId: string;
+    userDeclined: string;
+    userThatInvited: string;
+  }) => void;
 
+  "leave-conversation": ({
+    conversationId,
+  }: {
+    conversationId: string;
+  }) => void;
 };
 
 // userId used for live kit
 export type Identity = string;
 
 export interface Conversation {
+  status:"pending" | "ongoing" | "ended"
   members: Identity[];
   pending: Identity[];
-  type: "video" | "audio";
+  conversationId: string;
+  createdAt: number;
+  creator: string;
 }

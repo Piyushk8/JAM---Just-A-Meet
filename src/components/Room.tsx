@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "../App.css";
 import type {
+  Conversation,
   ConversationUpdatePayload,
   RoomSyncPayload,
   User,
@@ -26,7 +27,14 @@ import { fetchLiveKitToken } from "@/LiveKit/helper";
 import { LIVEKIT_URL } from "@/lib/consts";
 import { useParams } from "react-router-dom";
 import type { Room } from "livekit-client";
-
+import {
+  addInvitation,
+  addUserInConversation,
+  removeFromConversation,
+} from "@/Redux/misc";
+import InvitationToasts from "./shared/inviteToast";
+import { v4 as UUID } from "uuid";
+import CallScreen from "./Conversation/ConversationScreen";
 interface ChatMessage {
   id: string;
   userId: string;
@@ -64,10 +72,7 @@ export default function PhaserRoom() {
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingUser>>(
     new Map()
   );
-  const [Invitation, setInvitation] = useState<{
-    conversationId: string;
-    from: string;
-  } | null>(null);
+
   const [isConnecting, setIsConnecting] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -80,7 +85,7 @@ export default function PhaserRoom() {
     // usersInRoom,
   } = useSelector((state: RootState) => state.roomState);
   const params = useParams();
-  const { isUserControlsOpen } = useSelector(
+  const { isUserControlsOpen, OnGoingConversations } = useSelector(
     (state: RootState) => state.miscSlice
   );
   const dispatch = useDispatch();
@@ -196,35 +201,30 @@ export default function PhaserRoom() {
     const handleIncomingInvite = ({
       conversationId,
       from,
+      members,
     }: {
       conversationId: string;
       from: string;
+      members: string[];
     }) => {
-      setInvitation({ conversationId, from });
-      console.log("got invitation from", conversationId, from);
-      // if (currentUser?.id) {
-      //   socket.emit("call:accept", {
-      //     conversationId,
-      //     targetUserId: currentUser?.id,
-      //   });
-      //   liveKitManager.syncSubscriptions([from], []);
-      //   console.log("accepted");
-      // }
-      
+      dispatch(addInvitation({ from, members, conversationId, id: UUID() }));
     };
     const handleConversationUpdated = ({
       conversationId,
-      joined,
       left,
+      joined,
     }: ConversationUpdatePayload) => {
       console.log(
         "syncing for making a connection:",
-        conversationId,
-        left,
-        joined
+        conversationId
+        // isAudioEnabled?
       );
       if (!conversationId) return;
-      liveKitManager.syncSubscriptions([joined], [left]);
+      console.log("conversation updating");
+      // dispatch(addUserInConversation(joined))
+      // dispatch(removeFromConversation(left))
+      // liveKitManager.syncSubscriptions([joined], [left]);
+      console.log("conversation updated");
     };
     socket.on("connect", handleConnect);
     socket.on("user-joined", handleUserJoined);
@@ -236,6 +236,7 @@ export default function PhaserRoom() {
     socket.on("user-typing", handleUserTyping);
     socket.on("incoming-invite", handleIncomingInvite);
     socket.on("conversation-updated", handleConversationUpdated);
+
     return () => {
       socket.off("connect", handleConnect);
       socket.off("user-joined", handleUserJoined);
@@ -247,7 +248,6 @@ export default function PhaserRoom() {
       socket.off("user-typing", handleUserTyping);
       socket.off("conversation-updated", handleConversationUpdated);
       socket.off("incoming-invite", handleIncomingInvite);
-
       liveKitManager?.cleanup();
     };
   }, [socket, dispatch, liveKitManager]);
@@ -314,19 +314,40 @@ export default function PhaserRoom() {
       typingTimeoutRef.current = null;
     }
   };
-
   const connectionStatus = isConnecting
     ? "Connecting..."
     : liveKitManager.room
     ? "Connected"
     : "Disconnected";
+  useEffect(() => {
+    const check = async () => {
+      console.log("before");
+      await navigator.mediaDevices
+        ?.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((track) => track.stop());
+          console.log("OK", stream);
+        })
+        .catch((e) => console.log("error", e.name, e.message));
+      await liveKitManager.toggleAudio(true);
+      await liveKitManager.toggleVideo(true);
+      console.log("after");
+      await navigator.mediaDevices
+        ?.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((track) => track.stop());
+          console.log("OK", stream);
+        });
+    };
+    check()
+  }, []); // [] ensures it runs only once when component mounts
 
   return (
     <div className="relative">
       {/* LiveKit Container - Enhanced styling */}
       <div
         id="livekit-container"
-        className="livekit-container absolute top-0 left-0 z-40 bg-black border border-gray-300 rounded"
+        className="livekit-container absolute top-0 left-0 z-10 bg-black border border-gray-300 rounded"
         style={{
           width: "300px",
           height: "200px",
@@ -429,6 +450,14 @@ export default function PhaserRoom() {
           </div>
         </div>
       )}
+
+      {OnGoingConversations && (
+        <>
+          <CallScreen />
+        </>
+      )}
+
+      <InvitationToasts />
     </div>
   );
 }
