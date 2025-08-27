@@ -8,6 +8,12 @@ export interface userData {
 
 export type UserAvailabilityStatus = "idle" | "busy" | "away";
 
+export interface UserInfo {
+  id:string,
+  username:string,
+  availability?: UserAvailabilityStatus;
+}
+
 export interface User {
   id: string;
   availability: UserAvailabilityStatus;
@@ -15,10 +21,10 @@ export interface User {
   x: number;
   y: number;
   socketId: string;
-  roomId: string;
+  roomId?: string;
   isAudioEnabled?: boolean;
   isVideoEnabled?: boolean;
-  sprite: string | null;
+  sprite?: string | null;
 }
 
 export interface Room {
@@ -95,7 +101,7 @@ export type ServerToClient = {
 
 export type ClientToServer = {
   "join-room": (
-    data: { roomId: string; username: string },
+    data: { roomId?: string; username: string ,roomName?:string},
     cb: (res: { success: boolean }) => void
   ) => Promise<void>;
   "user-move": (data: { x: number; y: number }) => void;

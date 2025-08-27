@@ -1,10 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-import {
-  setCurrentUser,
-  updateUsersInRoom,
-} from "../Redux/roomState";
+import { setCurrentUser, updateUsersInRoom } from "../Redux/roomState";
 import { useDispatch } from "react-redux";
 import { useSocket } from "../SocketProvider";
 interface User {

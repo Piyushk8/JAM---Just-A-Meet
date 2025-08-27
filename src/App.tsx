@@ -3,6 +3,8 @@ import JoinRoom from "./Pages/JoinRoom";
 import PhaserRoom from "./components/Room";
 import { LiveKitProvider } from "./LiveKit/LiveKitContext/LiveKitProvider";
 import { LocalMediaContextProvider } from "./Providers/LocalMedia/Context";
+import ProtectedRoute from "./Providers/ProtectedRoutes/Context";
+import SignPage from "./Pages/SignPage";
 
 function App() {
   // const randomUserId = useMemo(() => crypto.randomUUID(), []);
@@ -12,9 +14,23 @@ function App() {
       <LocalMediaContextProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<JoinRoom />} />
-            <Route path="/home" element={<JoinRoom />} />
-            <Route path={`/r/:roomId`} element={<PhaserRoom />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <JoinRoom />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`/r/:roomId`}
+              element={
+                <ProtectedRoute>
+                  <PhaserRoom />
+                </ProtectedRoute>
+              }
+            />
+            <Route path={"/login"} element={<SignPage />} />
           </Routes>
         </BrowserRouter>
       </LocalMediaContextProvider>
