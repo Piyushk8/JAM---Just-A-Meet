@@ -5,8 +5,16 @@ import { LiveKitProvider } from "./LiveKit/LiveKitContext/LiveKitProvider";
 import { LocalMediaContextProvider } from "./Providers/LocalMedia/Context";
 import ProtectedRoute from "./Providers/ProtectedRoutes/Context";
 import SignPage from "./Pages/SignPage";
+import { useDispatch } from "react-redux";
+import { useEffect } from "react";
+import { fetchCurrentUser } from "./Redux/auth";
+import type { AppDispatch } from "./Redux";
 
 function App() {
+  const dispatch = useDispatch<AppDispatch>();
+  useEffect(() => {
+    dispatch(fetchCurrentUser());
+  }, [dispatch]);
   // const randomUserId = useMemo(() => crypto.randomUUID(), []);
 
   return (

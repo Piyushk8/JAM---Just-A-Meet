@@ -38,12 +38,12 @@ const formHandler = async (
     }
 
     const { username, password, mode } = getFormData<AuthFormFields>(formData);
-    
+
     // Validate required fields
     if (!username || !password || !mode) {
-      return { 
-        success: false, 
-        error: "Username, password, and mode are required" 
+      return {
+        success: false,
+        error: "Username, password, and mode are required",
       };
     }
 
@@ -51,9 +51,17 @@ const formHandler = async (
 
     let res;
     if (mode === "signin") {
-      res = await axios.post(`${SERVER_URL}/api/v1/user/login`, { username, password });
+      res = await axios.post(
+        `${SERVER_URL}/api/v1/user/login`,
+        { username, password },
+        { withCredentials: true }
+      );
     } else {
-      res = await axios.post(`${SERVER_URL}/api/v1/user/signup`, { username, password });
+      res = await axios.post(
+        `${SERVER_URL}/api/v1/user/signup`,
+        { username, password },
+        { withCredentials: true }
+      );
     }
 
     if (res.data.success) {
@@ -82,31 +90,34 @@ const formHandler = async (
 
 const SignPage = () => {
   const [isSignInPage, setIsSignInPage] = useState(true);
-  const [state, setState] = useState<AuthState>({ success: false, error: null });
+  const [state, setState] = useState<AuthState>({
+    success: false,
+    error: null,
+  });
   const [pending, setPending] = useState(false);
   const dispatch = useDispatch();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setPending(true);
-    
+
     // Clear previous error state
-    setState(prev => ({ ...prev, error: null }));
-    
+    setState((prev) => ({ ...prev, error: null }));
+
     try {
       const formData = new FormData(e.currentTarget);
-      
+
       // Debug: Check if form data is being created properly
       console.log("Form element:", e.currentTarget);
       console.log("Form data size:", Array.from(formData.entries()).length);
-      
+
       const result = await formHandler(state, formData);
       setState(result);
     } catch (error) {
       console.error("Submit error:", error);
-      setState({ 
-        success: false, 
-        error: "An unexpected error occurred during submission" 
+      setState({
+        success: false,
+        error: "An unexpected error occurred during submission",
       });
     } finally {
       setPending(false);
@@ -179,7 +190,9 @@ const SignPage = () => {
               type="submit"
               disabled={pending}
               className={`w-full py-2 rounded-lg text-white font-medium transition-opacity ${
-                isSignInPage ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
+                isSignInPage
+                  ? "bg-blue-500 hover:bg-blue-600"
+                  : "bg-green-500 hover:bg-green-600"
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {pending

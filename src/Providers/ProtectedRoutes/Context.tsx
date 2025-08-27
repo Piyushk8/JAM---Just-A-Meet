@@ -7,11 +7,12 @@ import { Navigate } from "react-router-dom";
 type Props = { children: JSX.Element };
 
 const ProtectedRoute: React.FC<Props> = ({ children }) => {
-  const user = useSelector((state: RootState) => state.authSlice.userInfo);
+  const { userInfo, loading } = useSelector(
+    (state: RootState) => state.authSlice
+  );
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (!userInfo) return <Navigate to="/login" />;
 
   return children;
 };
