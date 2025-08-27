@@ -8,8 +8,8 @@ function App() {
   // const randomUserId = useMemo(() => crypto.randomUUID(), []);
 
   return (
-    <LocalMediaContextProvider>
-      <LiveKitProvider>
+    <LiveKitProvider>
+      <LocalMediaContextProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<JoinRoom />} />
@@ -17,8 +17,8 @@ function App() {
             <Route path={`/r/:roomId`} element={<PhaserRoom />} />
           </Routes>
         </BrowserRouter>
-      </LiveKitProvider>
-    </LocalMediaContextProvider>
+      </LocalMediaContextProvider>
+    </LiveKitProvider>
   );
 }
 

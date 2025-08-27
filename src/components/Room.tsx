@@ -319,28 +319,28 @@ export default function PhaserRoom() {
     : liveKitManager.room
     ? "Connected"
     : "Disconnected";
-  useEffect(() => {
-    const check = async () => {
-      console.log("before");
-      await navigator.mediaDevices
-        ?.getUserMedia({ video: true, audio: true })
-        .then((stream) => {
-          stream.getTracks().forEach((track) => track.stop());
-          console.log("OK", stream);
-        })
-        .catch((e) => console.log("error", e.name, e.message));
-      await liveKitManager.toggleAudio(true);
-      await liveKitManager.toggleVideo(true);
-      console.log("after");
-      await navigator.mediaDevices
-        ?.getUserMedia({ video: true, audio: true })
-        .then((stream) => {
-          stream.getTracks().forEach((track) => track.stop());
-          console.log("OK", stream);
-        });
-    };
-    check()
-  }, []); // [] ensures it runs only once when component mounts
+  //! useEffect(() => {
+  //   const check = async () => {
+  //     console.log("before");
+  //     await navigator.mediaDevices
+  //       ?.getUserMedia({ video: true, audio: true })
+  //       .then((stream) => {
+  //         stream.getTracks().forEach((track) => track.stop());
+  //         console.log("OK", stream);
+  //       })
+  //       .catch((e) => console.log("error", e.name, e.message));
+  //     await liveKitManager.toggleAudio(true);
+  //     await liveKitManager.toggleVideo(true);
+  //     console.log("after");
+  //     await navigator.mediaDevices
+  //       ?.getUserMedia({ video: true, audio: true })
+  //       .then((stream) => {
+  //         stream.getTracks().forEach((track) => track.stop());
+  //         console.log("OK", stream);
+  //       });
+  //   };
+  //   check()
+  // }, []); // [] ensures it runs only once when component mounts
 
   return (
     <div className="relative">

@@ -16,23 +16,23 @@ export const useSocket = () => {
   return socket;
 };
 
-//  const SocketProvider = ({
-//   userId,
-//   children,
-// }: {
-//   userId: string;
-//   children: React.ReactNode;
-// }) => {
-//   const socket = useRef(getSocket()).current;
+export const SocketProvider = ({
+  userId,
+  children,
+}: {
+  userId: string;
+  children: React.ReactNode;
+}) => {
+  const socket = useRef(getSocket()).current;
 
-//   useEffect(() => {
-//     connectSocket(userId);
-//     return () => {
-//       disconnectSocket();
-//     };
-//   }, [userId]);
+  useEffect(() => {
+    connectSocket(userId);
+    return () => {
+      disconnectSocket();
+    };
+  }, [userId]);
 
-//   return (
-//     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
-//   );
-// };
+  return (
+    <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
+  );
+};

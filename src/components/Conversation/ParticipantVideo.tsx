@@ -1,5 +1,7 @@
+import type { RootState } from "@/Redux";
 import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
 import { useEffect, useRef } from "react";
+import { useSelector } from "react-redux";
 
 export function ParticipantVideo({
   publications,
@@ -17,9 +19,9 @@ export function ParticipantVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // 🔹 Attach video track
+  
   useEffect(() => {
-    const videoTrack = publications.videoTracks[0]; // first video track
+    const videoTrack = publications.videoTracks[0];
     if (videoTrack && videoRef.current) {
       videoTrack.attach(videoRef.current);
       return () => {
@@ -29,9 +31,8 @@ export function ParticipantVideo({
     }
   }, [publications.videoTracks]);
 
-  // 🔹 Attach audio track
   useEffect(() => {
-    const audioTrack = publications.audioTracks[0]; // first audio track
+    const audioTrack = publications.audioTracks[0];
     if (audioTrack && audioRef.current) {
       audioTrack.attach(audioRef.current);
       return () => {
@@ -41,7 +42,6 @@ export function ParticipantVideo({
     }
   }, [publications.audioTracks]);
 
-  // 🔹 Detect mute/camera state using the publication
   const isVideoEnabled = !publications.remotePublication.isMuted;
   const isAudioEnabled = !publications.remotePublication.isMuted;
 

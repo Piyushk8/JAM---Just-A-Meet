@@ -28,6 +28,10 @@ import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
 import { liveKitManager } from "@/LiveKit/liveKitManager";
 import { ParticipantVideo } from "./ParticipantVideo";
 import { useLiveKit } from "@/LiveKit/LiveKitContext/Context";
+import PendingScreen from "./PendingScreen";
+import JoiningScreen from "./JoiningScreen";
+import { useUserLocalMedia } from "@/Providers/LocalMedia/Context";
+import { LocalPreview } from "./LocalPreview";
 
 interface CallParticipant extends User {
   isVideoEnabled: boolean;
@@ -46,13 +50,12 @@ export default function CallScreen() {
   const [showControls, setShowControls] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
 
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideosRef = useRef<Map<string, HTMLVideoElement>>(new Map());
   const callStartTime = useRef<number>(0);
 
   const { OnGoingConversations, isCallScreenOpen } = useSelector(
     (state: RootState) => state.miscSlice
   );
+  const { participantsWithTracks, setParticipantsWithTracks } = useLiveKit();
   useEffect(() => {
     if (OnGoingConversations?.status === "ongoing" && status === "pending") {
       setStatus("joining");
@@ -64,12 +67,10 @@ export default function CallScreen() {
   );
   const dispatch = useDispatch();
   const socket = useSocket();
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const localAudioRef = useRef<HTMLAudioElement>(null);
 
-  // console.log(participantsWithTracks);
-  // console.log(participants);
-
-  const { participantsWithTracks, setParticipantsWithTracks } = useLiveKit();
-  // Call duration timer
+  // for timer
   useEffect(() => {
     if (status === "ongoing" && callStartTime.current === 0) {
       callStartTime.current = Date.now();
@@ -94,33 +95,6 @@ export default function CallScreen() {
   }, [showControls, status]);
 
   // Initialize local video preview
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-
-    const initializePreview = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error("Could not access camera/mic:", err);
-      }
-    };
-    if (status === "pending" || status === "joining") {
-      initializePreview();
-    }
-    return () => {
-      // Cleanup streams when component unmounts
-      if (localVideoRef.current?.srcObject) {
-        const stream = localVideoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [status]);
 
   useEffect(() => {
     if (!OnGoingConversations) return;
@@ -227,24 +201,36 @@ export default function CallScreen() {
       .toString()
       .padStart(2, "0")}`;
   };
+  const {
+    audioTrack,
+    videoTrack,
+    enableAudio,
+    disableAudio,
+    enableVideo,
+    disableVideo,
+  } = useUserLocalMedia();
 
   const toggleLocalVideo = async () => {
-    const enabled = !localVideo;
-    setLocalVideo(enabled);
-    await liveKitManager.toggleVideo(enabled);
+    if (videoTrack) {
+      await disableVideo();
+    } else {
+      await enableVideo();
+    }
     socket.emit("media-state-changed", {
-      isVideoEnabled: enabled,
-      isAudioEnabled: localAudio,
+      isVideoEnabled: !!videoTrack,
+      isAudioEnabled: !!audioTrack,
     });
   };
 
   const toggleLocalAudio = async () => {
-    const enabled = !localAudio;
-    setLocalAudio(enabled);
-    await liveKitManager.toggleAudio(enabled);
+    if (audioTrack) {
+      await disableAudio();
+    } else {
+      await enableAudio();
+    }
     socket.emit("media-state-changed", {
-      isVideoEnabled: localVideo,
-      isAudioEnabled: enabled,
+      isVideoEnabled: !!videoTrack,
+      isAudioEnabled: !!audioTrack,
     });
   };
 
@@ -263,118 +249,19 @@ export default function CallScreen() {
     return "grid-cols-4";
   };
 
+
+
   if (status === "pending") {
-    return (
-      <motion.div
-        className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="bg-white rounded-2xl shadow-xl p-6 w-[500px] max-w-full">
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-64 h-48 bg-gray-900 rounded-lg overflow-hidden">
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-xl font-semibold mb-2">
-                {status === "pending" && "Starting call..."}
-              </h3>
-              <p className="text-gray-600">"Waiting for others to join"</p>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                variant={localVideo ? "default" : "destructive"}
-                size="icon"
-                onClick={toggleLocalVideo}
-              >
-                {localVideo ? <Video /> : <VideoOff />}
-              </Button>
-
-              <Button
-                variant={localAudio ? "default" : "destructive"}
-                size="icon"
-                onClick={toggleLocalAudio}
-              >
-                {localAudio ? <Mic /> : <MicOff />}
-              </Button>
-
-              <Button variant="destructive" onClick={endCall}>
-                <PhoneOff className="mr-2" /> Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    );
+    return <PendingScreen endCall={endCall} />;
   }
 
   if (status == "joining") {
     return (
-      <>
-        <motion.div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-[500px] max-w-full">
-            <div className="flex flex-col items-center gap-6">
-              <div className="w-64 h-48 bg-gray-900 rounded-lg overflow-hidden">
-                <video
-                  ref={localVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="text-center">
-                <h3 className="text-xl font-semibold mb-2">Joining...</h3>
-                <p className="text-gray-600">Connecting to call</p>
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  variant={localVideo ? "default" : "destructive"}
-                  size="icon"
-                  onClick={toggleLocalVideo}
-                >
-                  {localVideo ? <Video /> : <VideoOff />}
-                </Button>
-
-                <Button
-                  variant={localAudio ? "default" : "destructive"}
-                  size="icon"
-                  onClick={toggleLocalAudio}
-                >
-                  {localAudio ? <Mic /> : <MicOff />}
-                </Button>
-
-                {status === "joining" ? (
-                  <Button
-                    variant="default"
-                    onClick={() => setStatus("ongoing")}
-                  >
-                    Join Call
-                  </Button>
-                ) : (
-                  <Button variant="destructive" onClick={endCall}>
-                    <PhoneOff className="mr-2" /> Cancel
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </>
+      <JoiningScreen
+        status={status}
+        joinCall={() => setStatus("ongoing")}
+        endCall={endCall}
+      />
     );
   }
 
@@ -390,26 +277,31 @@ export default function CallScreen() {
         <div className="h-full p-4">
           <div
             className={`grid ${getGridClass(
-              participantsWithTracks.size
+              participantsWithTracks.size + 1
             )} gap-2 h-full`}
           >
+            {/* Local participant */}
+            {videoTrack || audioTrack ? (
+             <LocalPreview/>
+            ) : null}
+
+            {/* Remote participants */}
             {OnGoingConversations?.members.map((memberId) => {
               const tracksAndPublications =
                 participantsWithTracks.get(memberId);
               const user = usersInRoom[memberId];
-              if (!tracksAndPublications)
-                return <>`{memberId}no data for this member`</>;
+
+              if (!tracksAndPublications || !user) return null;
 
               return (
                 <ParticipantVideo
-                  username={user?.username}
-                  isLocal={user?.id == currentUser?.id}
+                  username={user.username}
+                  isLocal={user.id === currentUser?.id}
                   publications={tracksAndPublications}
                   key={memberId}
                 />
               );
             })}
-            {/* <div id="livekit-container"></div> */}
           </div>
         </div>
 
