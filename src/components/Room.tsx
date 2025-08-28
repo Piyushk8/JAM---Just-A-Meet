@@ -37,6 +37,7 @@ import {
 import InvitationToasts from "./shared/inviteToast";
 import { v4 as UUID } from "uuid";
 import CallScreen from "./Conversation/ConversationScreen";
+import ChatPanel from "./ChatPanel";
 interface ChatMessage {
   id: string;
   userId: string;
@@ -234,8 +235,6 @@ export default function PhaserRoom() {
     socket.on("user-left", handleUserLeft);
     socket.on("room-sync", handleRoomSync);
     socket.on("user-media-state-changed", handleUserMediaStateChanged);
-    socket.on("message-received", handleMessageReceived);
-    socket.on("message-sent", handleMessageSent);
     socket.on("user-typing", handleUserTyping);
     socket.on("incoming-invite", handleIncomingInvite);
     socket.on("conversation-updated", handleConversationUpdated);
@@ -246,8 +245,6 @@ export default function PhaserRoom() {
       socket.off("user-left", handleUserLeft);
       socket.off("room-sync", handleRoomSync);
       socket.off("user-media-state-changed", handleUserMediaStateChanged);
-      socket.off("message-received", handleMessageReceived);
-      socket.off("message-sent", handleMessageSent);
       socket.off("user-typing", handleUserTyping);
       socket.off("conversation-updated", handleConversationUpdated);
       socket.off("incoming-invite", handleIncomingInvite);
@@ -279,44 +276,8 @@ export default function PhaserRoom() {
     }
   };
 
-  const sendMessage = () => {
-    if (socket && newMessage.trim()) {
-      socket.emit("send-message", {
-        message: newMessage.trim(),
-        type: "text",
-      });
-      setNewMessage("");
-      stopTyping();
-    }
-  };
 
-  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewMessage(e.target.value);
 
-    if (socket) {
-      socket.emit("typing-start");
-
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-
-      // Set new timeout
-      typingTimeoutRef.current = setTimeout(() => {
-        stopTyping();
-      }, 1000);
-    }
-  };
-
-  const stopTyping = () => {
-    if (socket) {
-      socket.emit("typing-stop");
-    }
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-  };
 
   useEffect(() => {
     if (!socket) return;
@@ -354,7 +315,7 @@ export default function PhaserRoom() {
     );
   }, [socket, params.roomId]);
 
-  
+
   const connectionStatus = isConnecting
     ? "Connecting..."
     : liveKitManager.room
@@ -434,62 +395,64 @@ export default function PhaserRoom() {
 
       {/* Chat Panel */}
       {/* {Invitation && <><div className="" onClick={handleAcc}>Invitation from {Invitation.from} for {Invitation.conversationId}</div></>} */}
-      {showChat && (
-        <div className="chat-panel absolute right-4 bottom-4 z-50 bg-white rounded shadow-lg w-96 max-h-[60vh] flex flex-col">
-          <div className="chat-header flex items-center justify-between px-4 py-2 bg-blue-500 text-white rounded-t">
-            <h3 className="text-lg font-semibold">Nearby Chat</h3>
-            <button onClick={() => setShowChat(false)}>✕</button>
-          </div>
+      {true && (
+        // <div className="chat-panel absolute right-4 bottom-4 z-50 bg-white rounded shadow-lg w-96 max-h-[60vh] flex flex-col">
+        //   <div className="chat-header flex items-center justify-between px-4 py-2 bg-blue-500 text-white rounded-t">
+        //     <h3 className="text-lg font-semibold">Nearby Chat</h3>
+        //     <button onClick={() => setShowChat(false)}>✕</button>
+        //   </div>
 
-          <div className="chat-messages overflow-y-auto flex-1 p-3 text-sm bg-gray-50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`chat-message mb-2 ${
-                  message.userId === currentUser?.id
-                    ? "text-right"
-                    : "text-left"
-                }`}
-              >
-                <div className="font-bold">{message.username}</div>
-                <div>{message.message}</div>
-                {message.distance && (
-                  <div className="text-xs text-gray-500">
-                    {Math.round(message.distance)}px away
-                  </div>
-                )}
-              </div>
-            ))}
+        //   <div className="chat-messages overflow-y-auto flex-1 p-3 text-sm bg-gray-50">
+        //     {messages.map((message) => (
+        //       <div
+        //         key={message.id}
+        //         className={`chat-message mb-2 ${
+        //           message.userId === currentUser?.id
+        //             ? "text-right"
+        //             : "text-left"
+        //         }`}
+        //       >
+        //         <div className="font-bold">{message.username}</div>
+        //         <div>{message.message}</div>
+        //         {message.distance && (
+        //           <div className="text-xs text-gray-500">
+        //             {Math.round(message.distance)}px away
+        //           </div>
+        //         )}
+        //       </div>
+        //     ))}
 
-            {Array.from(typingUsers.values()).map((typingUser) => (
-              <div
-                key={typingUser.userId}
-                className="typing-indicator text-gray-500 italic text-sm"
-              >
-                {typingUser.username} is typing...
-              </div>
-            ))}
-          </div>
+        //     {Array.from(typingUsers.values()).map((typingUser) => (
+        //       <div
+        //         key={typingUser.userId}
+        //         className="typing-indicator text-gray-500 italic text-sm"
+        //       >
+        //         {typingUser.username} is typing...
+        //       </div>
+        //     ))}
+        //   </div>
 
-          <div className="chat-input flex px-3 py-2 border-t">
-            <input
-              ref={chatInputRef}
-              type="text"
-              placeholder="Type a message..."
-              value={newMessage}
-              onChange={handleTyping}
-              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-              className="flex-1 px-3 py-1 rounded border border-gray-300 mr-2"
-            />
-            <button
-              onClick={sendMessage}
-              disabled={!newMessage.trim()}
-              className="px-4 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
-            >
-              Send
-            </button>
-          </div>
-        </div>
+        //   <div className="chat-input flex px-3 py-2 border-t">
+        //     <input
+        //       ref={chatInputRef}
+        //       type="text"
+        //       placeholder="Type a message..."
+        //       value={newMessage}
+        //       onChange={handleTyping}
+        //       onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+        //       className="flex-1 px-3 py-1 rounded border border-gray-300 mr-2"
+        //     />
+        //     <button
+        //       onClick={sendMessage}
+        //       disabled={!newMessage.trim()}
+        //       className="px-4 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+        //     >
+        //       Send
+        //     </button>
+        //   </div>
+        // </div>
+
+        <ChatPanel/>
       )}
 
       {OnGoingConversations && (

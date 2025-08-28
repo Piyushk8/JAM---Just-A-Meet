@@ -32,6 +32,7 @@ import PendingScreen from "./PendingScreen";
 import JoiningScreen from "./JoiningScreen";
 import { useUserLocalMedia } from "@/Providers/LocalMedia/Context";
 import { LocalPreview } from "./LocalPreview";
+import NearbyUsers from "../NearbyUserList/NearbyUserList";
 
 interface CallParticipant extends User {
   isVideoEnabled: boolean;
@@ -398,6 +399,9 @@ export default function CallScreen() {
           {OnGoingConversations?.members.length} participant
           {OnGoingConversations?.members.length !== 1 ? "s" : ""}
         </div>
+        <>
+        <NearbyUsers/>
+        </>
       </motion.div>
     );
   }

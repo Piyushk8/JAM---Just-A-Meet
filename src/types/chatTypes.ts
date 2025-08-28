@@ -3,18 +3,21 @@ export interface ChatMessage {
   userId: string;
   username: string;
   message: string;
-  type: string;
-  timestamp: string;
+  type: "text"|"emoji";
+  timestamp: number;
+  roomId:string,
   x: number;
   y: number;
   distance?: number;
 }
-
 export interface TypingUser {
   userId: string;
   username: string;
-  isTyping: boolean;
+  roomId: string;
+  x: number;
+  y: number;
 }
+
 
 // worldState.ts
 export type RemotePlayer = {

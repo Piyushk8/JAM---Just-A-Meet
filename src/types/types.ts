@@ -1,3 +1,5 @@
+import type { ChatMessage, TypingUser } from "./chatTypes";
+
 export interface userData {
   id: string;
   username: string;
@@ -35,22 +37,7 @@ export interface Room {
   users: Map<string, User>;
 }
 
-export interface ChatMessage {
-  id: string;
-  userId: string;
-  username: string;
-  message: string;
-  type: "text" | "emoji";
-  timestamp: string;
-  x: number;
-  y: number;
-}
 
-export interface TypingUser {
-  userId: string;
-  username: string;
-  isTyping: boolean;
-}
 
 export interface ProximityUser extends User {
   distance: number;
@@ -84,7 +71,6 @@ export type ServerToClient = {
   }) => void;
   "message-received": (msg: ChatMessage) => void;
   "message-sent": (msg: ChatMessage) => void;
-  "user-typing": (data: TypingUser) => void;
   "incoming-invite": (data: {
     conversationId: string;
     from: string;
@@ -100,6 +86,10 @@ export type ServerToClient = {
     targetUserId: string;
     conversation?: any;
   }) => void;
+  
+  "chat:message": (chatMessage: ChatMessage) => void;
+"chat:startTyping":(data:TypingUser)=>void
+  "chat:stopTyping":({userId}:{userId:string})=>void
 };
 
 export interface JoinRoomResponse {
@@ -162,6 +152,9 @@ export type ClientToServer = {
   }: {
     conversationId: string;
   }) => void;
+  "chat:message": (chatMessage: ChatMessage) => void;
+  "chat:startTyping":(data:TypingUser)=>void
+  "chat:stopTyping":({userId}:{userId:string})=>void
 };
 
 // userId used for live kit

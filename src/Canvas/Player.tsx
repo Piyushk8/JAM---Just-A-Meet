@@ -38,7 +38,7 @@ const Player = ({
   tilesize,
   playerImage,
   playerPosition,
-  onInteraction
+  onInteraction,
 }: Props) => {
   const [collisionMap, setCollisionMap] = useState<CollisionMap | null>(null);
   const dispatch = useDispatch();
@@ -51,7 +51,7 @@ const Player = ({
   );
   const interactionManagerRef = useRef<InteractionManagerType | null>(null);
 
-  // Critical dont touch, mistake in past!!!: Always ensure we're working with tile coordinates no pixels 
+  // Critical dont touch, mistake in past!!!: Always ensure we're working with tile coordinates no pixels
   //   useEffect(() => {
   //   if (externalPosition && isPixelCoordinate(externalPosition)) {
   //     console.warn('⚠️ COORDINATE SYSTEM ISSUE: Received pixel coordinates:', externalPosition);
@@ -233,7 +233,7 @@ const Player = ({
             manager.getClosestInteraction(playerPosition)
           );
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
-        
+
           dispatchInteractable(
             dispatch,
             manager.getClosestInteraction(playerPosition)
@@ -339,6 +339,15 @@ const Player = ({
     if (!collisionMap) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        (e.target as HTMLElement).isContentEditable
+      ) {
+        return; // don't move when typing
+      }
+
       if (e.key === "e" || e.key === "E" || e.key === " ") {
         e.preventDefault();
         if (interactionManagerRef.current && closestInteraction) {
