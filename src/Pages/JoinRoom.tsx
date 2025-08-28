@@ -4,6 +4,7 @@ import "../App.css";
 import { setCurrentUser, updateUsersInRoom } from "../Redux/roomState";
 import { useDispatch } from "react-redux";
 import { useSocket } from "../SocketProvider";
+import type { JoinRoomResponse } from "@/types/types";
 interface User {
   id: string;
   username: string;
@@ -17,7 +18,8 @@ interface User {
 export const JoinRoom = () => {
   const socket = useSocket();
   const [username, setUsername] = useState("");
-  const [roomId, setRoomId] = useState("room1");
+  const [roomName, setRoomName] = useState<string>("");
+  const [roomId, setRoomId] = useState<string>("");
   const dispatch = useDispatch();
   const nav = useNavigate();
 
@@ -39,25 +41,30 @@ export const JoinRoom = () => {
     if (socket && username.trim()) {
       socket.emit(
         "join-room",
-        { roomId, username },
-        async (res: { success: boolean }) => {
+        {
+          roomId: roomId.trim() ?? undefined,
+          roomName: roomName.trim() ?? undefined,
+        },
+        async (res: { success: boolean; data: JoinRoomResponse }) => {
           try {
-            if (!res || !res.success) {
+            if (!res || !res.success || !res.data) {
               console.log("Error in joining room");
             } else {
               if (!socket.id) return;
+              const { userId, userName, availability, sprite } = res.data.user;
+              const { roomId } = res.data.room;
               dispatch(
                 setCurrentUser({
-                  id: socket.id,
-                  username,
+                  id: userId,
+                  username: userName,
                   x: 22,
                   y: 10,
                   socketId: socket.id,
                   roomId: roomId,
                   isAudioEnabled: false,
                   isVideoEnabled: false,
-                  sprite: "",
-                  availability: "idle",
+                  sprite: sprite ?? "alex",
+                  availability: availability,
                 })
               );
               nav(`/r/${roomId}`);
@@ -92,6 +99,13 @@ export const JoinRoom = () => {
               value={roomId}
               className="bg-gray-200 h-8 w-full border-2 text-gray-900  border-sky-200 flex items-center justify-center p-5 rounded-2xl"
               onChange={(e) => setRoomId(e.target.value)}
+            />
+            <input
+              type="text"
+              placeholder="Room Name"
+              value={roomName}
+              className="bg-gray-200 h-8 w-full border-2 text-gray-900  border-sky-200 flex items-center justify-center p-5 rounded-2xl"
+              onChange={(e) => setRoomName(e.target.value)}
             />
             <button
               className="bg-sky-300 px-4 py-2 hover:bg-white border-sky-300 rounded-2xl border-1 font-semibold hover:text-sky-300 text-white"

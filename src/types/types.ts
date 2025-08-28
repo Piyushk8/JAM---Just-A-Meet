@@ -9,8 +9,8 @@ export interface userData {
 export type UserAvailabilityStatus = "idle" | "busy" | "away";
 
 export interface UserInfo {
-  id:string,
-  username:string,
+  id: string;
+  username: string;
   availability?: UserAvailabilityStatus;
 }
 
@@ -92,17 +92,29 @@ export type ServerToClient = {
     conversationId: string;
     userDeclined: string;
   }) => void;
-"call-accepted-response": (data: {
+  "call-accepted-response": (data: {
     conversationId: string;
     targetUserId: string;
     conversation?: any;
   }) => void;
 };
 
+export interface JoinRoomResponse {
+  user: {
+    userName: string;
+    userId: string;
+    sprite?: string;
+    availability: UserAvailabilityStatus;
+  };
+  room: {
+    roomId: string;
+  };
+}
+
 export type ClientToServer = {
   "join-room": (
-    data: { roomId?: string; username: string ,roomName?:string},
-    cb: (res: { success: boolean }) => void
+    data: { roomId?: string; roomName?: string },
+    cb: (res: { success: boolean; data: JoinRoomResponse }) => void
   ) => Promise<void>;
   "user-move": (data: { x: number; y: number }) => void;
   "media-state-changed": (data: {
@@ -153,7 +165,7 @@ export type ClientToServer = {
 export type Identity = string;
 
 export interface Conversation {
-  status:"pending" | "ongoing" | "ended"
+  status: "pending" | "ongoing" | "ended";
   members: Identity[];
   pending: Identity[];
   conversationId: string;
