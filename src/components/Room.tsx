@@ -3,6 +3,7 @@ import "../App.css";
 import type {
   Conversation,
   ConversationUpdatePayload,
+  JoinRoomResponse,
   RoomSyncPayload,
   User,
 } from "../types/types";
@@ -10,6 +11,7 @@ import { liveKitManager } from "../LiveKit/liveKitManager";
 import {
   addUserInRoom,
   removeFromUsersInRoom,
+  setCurrentUser,
   setIsAudioEnabled,
   setIsVideoEnabled,
   updateCurrentUser,
@@ -73,6 +75,7 @@ export default function PhaserRoom() {
     new Map()
   );
 
+  const { userInfo } = useSelector((state: RootState) => state.authSlice);
   const [isConnecting, setIsConnecting] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -147,7 +150,7 @@ export default function PhaserRoom() {
     };
     const handleRoomSync = (payload: RoomSyncPayload) => {
       const { me, players, proximity, audio } = payload;
-      dispatch(updateCurrentUser(me));
+      // dispatch(updateCurrentUser(me));
       dispatch(updateUsersInRoom(players));
       dispatch(
         updateNearbyParticipants({
@@ -314,6 +317,44 @@ export default function PhaserRoom() {
       typingTimeoutRef.current = null;
     }
   };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const { roomId } = params;
+
+    socket.emit(
+      "join-room",
+      {
+        roomId,
+      },
+      (res: { success: boolean; data: JoinRoomResponse }) => {
+        if (!res || !res.success || !socket.id) {
+          console.error("Failed to join room");
+          return;
+        }
+
+        const { user, room } = res.data;
+
+        dispatch(
+          setCurrentUser({
+            id: user.userId,
+            username: user.userName,
+            x: 22,
+            y: 10,
+            socketId: socket?.id,
+            roomId: room.roomId,
+            isAudioEnabled: false,
+            isVideoEnabled: false,
+            sprite: user.sprite ?? "alex",
+            availability: user.availability,
+          })
+        );
+      }
+    );
+  }, [socket, params.roomId]);
+
+  
   const connectionStatus = isConnecting
     ? "Connecting..."
     : liveKitManager.room
