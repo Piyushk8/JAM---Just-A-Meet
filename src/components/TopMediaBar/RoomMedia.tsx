@@ -66,7 +66,7 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
   const hasOverflow = allUsers.length > maxVisible;
 
   const getContainerClasses = () => {
-    const base = "fixed z-50";
+    const base = "fixed z-20";
     switch (position) {
       case "top":
         return `${base} top-0 left-0 right-0 flex flex-col items-center justify-center p-4`;

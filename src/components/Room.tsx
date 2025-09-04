@@ -220,7 +220,7 @@ export default function PhaserRoom() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative z-0">
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
       <Canvas />
       <NearbyUsers />

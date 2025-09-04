@@ -42,7 +42,7 @@ const UserControls = () => {
     { label: "Away", value: "away", color: "bg-yellow-500" },
   ];
   return (
-    <div className="absolute top-5 right-5">
+    <div className="absolute z-30 top-5 right-5">
       <button
         onClick={onClickHandler}
         className="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800 hover:bg-gray-700"
