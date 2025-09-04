@@ -49,31 +49,42 @@ export const LocalMediaContextProvider: React.FC<{
   /** Disable video */
   const disableVideo = async () => {
     if (videoTrack) {
-      if (liveKitManager.room) {
-        await liveKitManager.room.localParticipant.unpublishTrack(videoTrack);
+      try {
+        await liveKitManager.room?.localParticipant.unpublishTrack(videoTrack);
+        videoTrack.stop();
+      } catch (err) {
+        console.error("Error disabling video:", err);
       }
-      videoTrack.stop();
       setVideoTrack(null);
     }
   };
 
   const enableAudio = async () => {
-    const track = await createLocalAudioTrack();
-    setAudioTrack(track);
+    try {
+      const track = await createLocalAudioTrack();
+      setAudioTrack(track);
 
-    if (liveKitManager.room) {
-      await liveKitManager.room.localParticipant.publishTrack(track);
+      if (liveKitManager.room) {
+        await liveKitManager.room.localParticipant.publishTrack(track);
+      }
+    } catch (error) {
+      console.error("Error enable audio:", error);
     }
   };
 
   const disableAudio = async () => {
-    if (audioTrack) {
-      if (liveKitManager.room) {
-        await liveKitManager.room.localParticipant.unpublishTrack(audioTrack);
+    try {
+      if (audioTrack) {
+        if (liveKitManager.room) {
+          await liveKitManager.room.localParticipant.unpublishTrack(audioTrack);
+        }
+        audioTrack.stop();
+        setAudioTrack(null);
       }
-      audioTrack.stop();
-      setAudioTrack(null);
+    } catch (error) {
+      console.log("eroor disabling audio");
     }
+    setAudioTrack(null);
   };
 
   return (

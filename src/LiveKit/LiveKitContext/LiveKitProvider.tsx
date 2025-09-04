@@ -9,7 +9,7 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({
   const [manager] = useState(() => liveKitManager);
   const [participantsWithTracks, setParticipantsWithTracks] =
     useState<ParticipantTracks>(new Map());
-
+console.log(participantsWithTracks)
   useEffect(() => {
     const handleTrackSubscribed = (
       participantId: string,

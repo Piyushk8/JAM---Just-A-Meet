@@ -168,3 +168,18 @@
     font-family: 'Inter', sans-serif !important;
   }
 }
+.animated-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-repeat: no-repeat;
+  animation: bgAnim 1s steps(4) infinite;
+}
+
+@keyframes bgAnim {
+  0%   { background-image: url('/bg_1.png'); }
+  25%  { background-image: url('/bg_2.png'); }
+  50%  { background-image: url('/bg_3.png'); }
+  75%  { background-image: url('/bg_4.png'); }
+  100% { background-image: url('/bg_1.png'); }
+}

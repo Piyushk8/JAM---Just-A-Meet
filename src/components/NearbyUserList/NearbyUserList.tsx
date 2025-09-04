@@ -4,12 +4,7 @@ import type { RootState } from "../../Redux";
 import {
   ChevronUp,
   ChevronDown,
-  Divide,
   PhoneCallIcon,
-  VideoIcon,
-  LetterText,
-  PhoneCall,
-  LucidePhoneCall,
 } from "lucide-react";
 import { useSocket } from "@/SocketProvider";
 import type { Conversation } from "@/types/types";
@@ -92,14 +87,13 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
         )}
       </div>
 
-      {/* List (scrollable) */}
       <div
         className={`
           overflow-y-auto px-3 py-2 transition-opacity duration-200
           ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}
         `}
         style={{
-          maxHeight: "calc(50vh - 2.5rem)", // account for header height
+          maxHeight: "calc(50vh - 2.5rem)", 
         }}
       >
         {nearbyUsers?.length ? (

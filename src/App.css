@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "@fontsource/press-start-2p"; 
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -167,4 +168,9 @@
   div {
     font-family: 'Inter', sans-serif !important;
   }
+}
+
+
+.font-pixel {
+  font-family: "Press Start 2P", cursive;
 }

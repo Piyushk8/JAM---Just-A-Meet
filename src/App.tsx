@@ -9,6 +9,7 @@ import { useDispatch } from "react-redux";
 import { useEffect } from "react";
 import { fetchCurrentUser } from "./Redux/auth";
 import type { AppDispatch } from "./Redux";
+import Landing from "./LandingPage/LandingPage";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -23,13 +24,14 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route
-              path="/"
+              path="/join"
               element={
                 <ProtectedRoute>
                   <JoinRoom />
                 </ProtectedRoute>
               }
             />
+            <Route path="/" element={<Landing />} />
             <Route
               path={`/r/:roomId`}
               element={
