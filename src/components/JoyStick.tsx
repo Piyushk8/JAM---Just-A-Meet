@@ -12,7 +12,6 @@ interface JoystickProps {
 const Joystick: React.FC<JoystickProps> = ({
   onMove,
   onEnd,
-  position = { left: "50px", bottom: "50px" },
   color = "rgba(50, 50, 50, 0.5)",
   size = 100,
 }) => {
@@ -34,7 +33,7 @@ const Joystick: React.FC<JoystickProps> = ({
 
     managerRef.current = manager;
 
-    manager.on("move", (evt, data) => {
+    manager.on("move", (_evt, data) => {
       if (data && data.distance && data.angle) {
         const { distance, angle } = data;
 

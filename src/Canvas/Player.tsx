@@ -5,7 +5,6 @@ import { updateCurrentUser } from "../Redux/roomState";
 import { ensureTilePosition, type TilePosition } from "../lib/helper";
 import { useSocket } from "../SocketProvider";
 import type {
-  InteractableObject,
   InteractablesMap,
 } from "../Interactables/coreDS";
 import type {
@@ -36,9 +35,6 @@ interface CollisionMap {
 
 const Player = ({
   mapData,
-  ctx,
-  tilesize,
-  playerImage,
   playerPosition,
   onInteraction,
   joystickMovement,
@@ -53,7 +49,7 @@ const Player = ({
 
   const [interactablesMap, setInteractablesMap] =
     useState<InteractablesMap | null>(null);
-  const { availableInteractions, closestInteraction } = useSelector(
+  const { closestInteraction } = useSelector(
     (state: RootState) => state.interactionState
   );
   const interactionManagerRef = useRef<InteractionManagerType | null>(null);

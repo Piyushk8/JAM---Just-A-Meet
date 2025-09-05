@@ -26,7 +26,11 @@ import NearbyUsers from "./NearbyUserList/NearbyUserList";
 import { fetchLiveKitToken } from "@/LiveKit/helper";
 import { LIVEKIT_URL } from "@/lib/consts";
 import { useParams } from "react-router-dom";
-import { addInvitation } from "@/Redux/misc";
+import {
+  addInvitation,
+  addUserInConversation,
+  removeFromConversation,
+} from "@/Redux/misc";
 import InvitationToasts from "./shared/inviteToast";
 import { v4 as UUID } from "uuid";
 import CallScreen from "./Conversation/ConversationScreen";
@@ -73,7 +77,7 @@ export default function PhaserRoom() {
       dispatch(updateNearbyParticipants({ left: [userId], joined: null }));
     };
     const handleRoomSync = (payload: RoomSyncPayload) => {
-      const { me, players, proximity, audio } = payload;
+      const { players, proximity } = payload;
       // dispatch(updateCurrentUser(me));
       dispatch(updateUsersInRoom(players));
       dispatch(
@@ -121,16 +125,11 @@ export default function PhaserRoom() {
       left,
       joined,
     }: ConversationUpdatePayload) => {
-      console.log(
-        "syncing for making a connection:",
-        conversationId
-        // isAudioEnabled?
-      );
       if (!conversationId) return;
       console.log("conversation updating");
-      // dispatch(addUserInConversation(joined))
-      // dispatch(removeFromConversation(left))
-      // liveKitManager.syncSubscriptions([joined], [left]);
+      dispatch(addUserInConversation(joined));
+      dispatch(removeFromConversation(left));
+      liveKitManager.syncSubscriptions([joined], [left]);
       console.log("conversation updated");
     };
     socket.on("connect", handleConnect);
@@ -200,7 +199,7 @@ export default function PhaserRoom() {
 
       const token = await fetchLiveKitToken(currentUser?.id, params.roomId);
 
-      const room = await liveKitManager.join({
+      await liveKitManager.join({
         url: LIVEKIT_URL,
         token,
         enableAudio: false,

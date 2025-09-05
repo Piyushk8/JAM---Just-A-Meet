@@ -28,7 +28,7 @@ function getFormData<T extends Record<string, any>>(formData: FormData): T {
 }
 
 const formHandler = async (
-  prevState: AuthState,
+  _prevState: AuthState,
   formData: FormData
 ): Promise<AuthState> => {
   try {
@@ -241,7 +241,7 @@ const SignPage = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <motion.h1 
+          <motion.h1
             className="text-3xl font-bold mb-2 text-center text-white"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -252,18 +252,20 @@ const SignPage = () => {
               Virtual HQ
             </span>
           </motion.h1>
-          
+
           <motion.p
             className="text-center text-gray-300 mb-6 font-light"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            {isSignInPage ? "Sign in to your workspace" : "Create your workspace"}
+            {isSignInPage
+              ? "Sign in to your workspace"
+              : "Create your workspace"}
           </motion.p>
 
           {state.success && state.user ? (
-            <motion.div 
+            <motion.div
               className="text-center space-y-4"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -271,13 +273,20 @@ const SignPage = () => {
             >
               <div className="p-4 bg-green-500/20 border border-green-400/30 rounded-xl backdrop-blur-sm">
                 <p className="text-green-300 font-semibold text-lg">
-                  ✅ {state.user.mode === "signin" ? "Welcome back" : "Account created"}!
+                  ✅{" "}
+                  {state.user.mode === "signin"
+                    ? "Welcome back"
+                    : "Account created"}
+                  !
                 </p>
                 <p className="text-white mt-2">
-                  Hello, <span className="font-bold text-cyan-300">{state.user.userName}</span>
+                  Hello,{" "}
+                  <span className="font-bold text-cyan-300">
+                    {state.user.userName}
+                  </span>
                 </p>
               </div>
-              
+
               <motion.button
                 className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 rounded-xl text-white font-semibold shadow-lg"
                 whileHover={{ scale: 1.02 }}
@@ -288,8 +297,8 @@ const SignPage = () => {
               </motion.button>
             </motion.div>
           ) : (
-            <motion.form 
-              onSubmit={handleSubmit} 
+            <motion.form
+              onSubmit={handleSubmit}
               className="space-y-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -300,7 +309,7 @@ const SignPage = () => {
                 name="mode"
                 value={isSignInPage ? "signin" : "signup"}
               />
-              
+
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -315,7 +324,7 @@ const SignPage = () => {
                   autoComplete="username"
                 />
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -327,12 +336,14 @@ const SignPage = () => {
                   placeholder="Password"
                   className="w-full bg-white/10 border border-white/20 p-4 rounded-xl text-white placeholder-gray-300 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent transition-all"
                   required
-                  autoComplete={isSignInPage ? "current-password" : "new-password"}
+                  autoComplete={
+                    isSignInPage ? "current-password" : "new-password"
+                  }
                 />
               </motion.div>
 
               {state.error && (
-                <motion.div 
+                <motion.div
                   className="p-3 bg-red-500/20 border border-red-400/30 rounded-xl backdrop-blur-sm"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -356,30 +367,36 @@ const SignPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.7 }}
               >
-                {pending
-                  ? (
-                    <span className="flex items-center justify-center">
-                      <motion.div
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-3"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      {isSignInPage ? "Signing in..." : "Signing up..."}
-                    </span>
-                  )
-                  : isSignInPage
-                  ? "Sign In 🚀"
-                  : "Sign Up 🎉"}
+                {pending ? (
+                  <span className="flex items-center justify-center">
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-3"
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                    />
+                    {isSignInPage ? "Signing in..." : "Signing up..."}
+                  </span>
+                ) : isSignInPage ? (
+                  "Sign In 🚀"
+                ) : (
+                  "Sign Up 🎉"
+                )}
               </motion.button>
 
-              <motion.div 
+              <motion.div
                 className="text-center mt-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.8 }}
               >
                 <p className="text-gray-300">
-                  {isSignInPage ? "New to Virtual HQ? " : "Already have an account? "}
+                  {isSignInPage
+                    ? "New to Virtual HQ? "
+                    : "Already have an account? "}
                   <button
                     type="button"
                     className="text-cyan-400 underline hover:text-cyan-300 font-medium transition-colors"

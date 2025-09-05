@@ -3,7 +3,6 @@ import { tileToChunk, getChunkKey, getTileKey } from "./coreDS";
 import type {
   InteractablesMap,
   InteractableObject,
-  SpatialChunk,
   Rectangle,
   InteractablesTypes,
 } from "./coreDS";
@@ -42,9 +41,6 @@ export class InteractablesMapBuilder {
       }
     });
 
-    // console.log(
-    //   `✅ Built interactables map with ${interactablesMap.objects.size} objects`
-    // );
     return interactablesMap;
   }
 
@@ -55,10 +51,6 @@ export class InteractablesMapBuilder {
   ): void {
     const layerType = this.getInteractableType(layer.name);
     if (!layerType) return;
-
-    // console.log(
-    //   `📦 Processing object layer: ${layer.name} (type: ${layerType})`
-    // );
 
     layer.objects.forEach((obj) => {
       if (!obj.x || !obj.y || !obj.width || !obj.height) return;
@@ -112,8 +104,6 @@ export class InteractablesMapBuilder {
   ): void {
     const layerType = this.getInteractableType(layer.name);
     if (!layerType) return;
-
-    // console.log(`🎯 Processing tile layer: ${layer.name} (type: ${layerType})`);
 
     // Group adjacent tiles into objects
     const processedTiles = new Set<string>();

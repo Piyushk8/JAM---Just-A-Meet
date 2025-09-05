@@ -1,15 +1,8 @@
-import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Redux";
 import { closeUserControls } from "@/Redux/misc";
-import { useState } from "react";
 import {
-  LogOut,
-  Video,
-  Mic,
-  User,
   LogOutIcon,
-  Settings2,
   Settings,
 } from "lucide-react";
 import { Switch } from "../ui/switch";

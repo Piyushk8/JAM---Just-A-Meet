@@ -54,7 +54,7 @@ export default class Background extends Phaser.Scene {
     }
   }
 
-  update(t: number, dt: number) {
+  update(_t: number, _dt: number) {
     this.physics.world.wrap(this.cloud, 500)
   }
 }

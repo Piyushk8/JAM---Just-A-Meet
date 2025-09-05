@@ -80,7 +80,7 @@ const miscSlice = createSlice({
         (i) => i.id != action.payload
       );
     },
-    clearInvitations: (state, action: PayloadAction<string>) => {
+    clearInvitations: (state, _action: PayloadAction<string>) => {
       state.invitations = [];
     },
     addConversation: (state, action: PayloadAction<Conversation>) => {
@@ -92,11 +92,11 @@ const miscSlice = createSlice({
     removeFromConversation: (state, action: PayloadAction<Identity>) => {
       state.OnGoingConversations?.members.filter((m) => m != action.payload);
     },
-    pendingToMemberInConversation: (state, action: PayloadAction<Identity>) => {
+    pendingToMemberInConversation: (_state, action: PayloadAction<Identity>) => {
       addUserInConversation(action.payload);
       removeFromConversation(action.payload);
     },
-    deleteConversation: (state, action: PayloadAction<string>) => {
+    deleteConversation: (state, _action: PayloadAction<string>) => {
       state.OnGoingConversations = null;
     },
   },

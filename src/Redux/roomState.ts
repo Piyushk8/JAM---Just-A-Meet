@@ -1,12 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type {
-  Conversation,
-  Identity,
   User,
   UserAvailabilityStatus,
 } from "../types/types";
-import type { LocalAudioTrack, LocalVideoTrack } from "livekit-client";
 
 interface RoomState {
   currentUser: User | null;

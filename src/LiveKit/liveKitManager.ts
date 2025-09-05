@@ -229,6 +229,8 @@ class LiveKitManager {
     }
   }
 
+  //@ts-ignore
+  // future use
   private async createVideoPreview(track: LocalVideoTrack): Promise<void> {
     try {
       const container = document.getElementById("livekit-container");
@@ -511,7 +513,7 @@ class LiveKitManager {
   }
 
   private handleTrackPublished = (
-    RemoteTrackPublication: RemoteTrackPublication,
+    _RemoteTrackPublication: RemoteTrackPublication,
     remoteParticipant: RemoteParticipant
   ) => {
     try {
@@ -629,7 +631,7 @@ class LiveKitManager {
 
   private handleLocalTrackUnpublished = (
     publication: LocalTrackPublication,
-    participant: LocalParticipant
+    _participant: LocalParticipant
   ) => {
     // Just detach the track from elements
     publication.track?.detach();

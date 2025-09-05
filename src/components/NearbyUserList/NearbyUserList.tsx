@@ -25,7 +25,7 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
   );
 
   const handleInviteOnCallWithId = (id: string) => {
-    return (event: React.MouseEvent) => {
+    return (_event: React.MouseEvent) => {
       handleInviteOnCall(id);
     };
   };

@@ -6,7 +6,6 @@ import {
   getSocket,
   type SocketType,
 } from "./socket";
-import { Socket } from "socket.io-client";
 
 const SocketContext = createContext<SocketType | null>(null);
 

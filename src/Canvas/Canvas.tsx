@@ -4,7 +4,7 @@ import type { TiledMap } from "../types/canvas";
 
 export default function Canvas() {
   const [mapData, setMapData] = useState<TiledMap | null>(null);
-  const [tilesetLoaded, setTilesetLoaded] = useState(false);
+  const [_tilesetLoaded, setTilesetLoaded] = useState(false);
   const [tilesetImages, setTilesetImages] = useState<
     Record<string, HTMLImageElement>
   >({});

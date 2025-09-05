@@ -1,9 +1,7 @@
-import { tileToChunk, getChunkKey, getTileKey, manhattanDistance } from "./coreDS";
+import { tileToChunk, getChunkKey, manhattanDistance } from "./coreDS";
 import type {
   InteractablesMap,
   InteractableObject,
-  SpatialChunk,
-  Rectangle,
   InteractionState,
 } from "./coreDS";
 
@@ -179,6 +177,7 @@ export class InteractionManager {
     // this.updateReduxState(playerPosition);
   }
 
+  //@ts-ignore // future use
   private updateReduxState(playerPosition: { x: number; y: number }): void {
     if (this.stateUpdateCallback) {
       console.log(this.getAvailableInteractions,this.getClosestInteraction)

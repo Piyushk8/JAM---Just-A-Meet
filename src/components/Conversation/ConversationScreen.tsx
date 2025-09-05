@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { useSocket } from "@/SocketProvider";
-import type { Conversation, User } from "@/types/types";
+import type { User } from "@/types/types";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/Redux";
 import {
@@ -10,7 +10,6 @@ import {
   MicOff,
   Video,
   VideoOff,
-  Phone,
   PhoneOff,
   Settings,
   MoreVertical,
@@ -20,11 +19,9 @@ import {
   Grid3X3,
 } from "lucide-react";
 import {
-  addConversation,
   addUserInConversation,
   pendingToMemberInConversation,
 } from "@/Redux/misc";
-import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
 import { liveKitManager } from "@/LiveKit/liveKitManager";
 import { ParticipantVideo } from "./ParticipantVideo";
 import { useLiveKit } from "@/LiveKit/LiveKitContext/Context";
@@ -45,18 +42,17 @@ export default function CallScreen() {
     "pending" | "ongoing" | "ended" | "joining"
   >("pending");
   const [participants, setParticipants] = useState<CallParticipant[]>([]);
-  const [localVideo, setLocalVideo] = useState(true);
-  const [localAudio, setLocalAudio] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [localVideo, _setLocalVideo] = useState(true);
+  const [localAudio, _setLocalAudio] = useState(true);
   const [showControls, setShowControls] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
 
   const callStartTime = useRef<number>(0);
 
-  const { OnGoingConversations, isCallScreenOpen } = useSelector(
+  const { OnGoingConversations } = useSelector(
     (state: RootState) => state.miscSlice
   );
-  const { participantsWithTracks, setParticipantsWithTracks } = useLiveKit();
+  const { participantsWithTracks } = useLiveKit();
   useEffect(() => {
     if (OnGoingConversations?.status === "ongoing" && status === "pending") {
       setStatus("joining");
@@ -68,9 +64,7 @@ export default function CallScreen() {
   );
   const dispatch = useDispatch();
   const socket = useSocket();
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const localAudioRef = useRef<HTMLAudioElement>(null);
-
+ 
   // for timer
   useEffect(() => {
     if (status === "ongoing" && callStartTime.current === 0) {
@@ -100,7 +94,7 @@ export default function CallScreen() {
   useEffect(() => {
     if (!OnGoingConversations) return;
 
-    const { conversationId, members } = OnGoingConversations;
+    const { conversationId } = OnGoingConversations;
 
     // Set initial participants
     // const callParticipants = members
@@ -144,7 +138,7 @@ export default function CallScreen() {
         setStatus("ended");
       }
     };
-
+    
     const handleParticipantJoined = (data: {
       userId: string;
       conversationId: string;

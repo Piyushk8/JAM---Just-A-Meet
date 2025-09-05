@@ -1,8 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { InteractableObject } from "../Interactables/coreDS";
 import {
-  serializeInteractable,
   type serializedInteractableType,
 } from "../lib/helper";
 

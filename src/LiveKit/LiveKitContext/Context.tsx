@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext } from "react";
 import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
 import type { liveKitManager } from "../liveKitManager";
 
