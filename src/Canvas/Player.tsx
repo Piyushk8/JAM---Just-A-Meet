@@ -24,6 +24,8 @@ type Props = {
   playerImage: HTMLImageElement | null;
   playerPosition: { x: number; y: number };
   onInteraction: (event: InteractionEvent) => void;
+
+  joystickMovement?: { x: number; y: number } | null;
 };
 
 interface CollisionMap {
@@ -39,10 +41,15 @@ const Player = ({
   playerImage,
   playerPosition,
   onInteraction,
+  joystickMovement,
 }: Props) => {
   const [collisionMap, setCollisionMap] = useState<CollisionMap | null>(null);
   const dispatch = useDispatch();
   const socket = useSocket();
+
+  const lastMoveTime = useRef(0);
+  const movementCooldown = useRef(150); // ms between moves
+  const movementThreshold = useRef(0.3); // minimum distance to trigger movement
 
   const [interactablesMap, setInteractablesMap] =
     useState<InteractablesMap | null>(null);
@@ -286,54 +293,6 @@ const Player = ({
     [collisionMap]
   );
 
-  // Initializes position ONCE and prevent loops
-  // useEffect(() => {
-  //   if (!collisionMap) return;
-
-  //   console.log("🚀 Initializing player position. Current:", playerPosition);
-
-  //   if (!isValidPosition(playerPosition)) {
-  //     console.log("❌ Current position invalid, finding new position...");
-
-  //     const centerX = Math.floor(collisionMap.width / 2);
-  //     const centerY = Math.floor(collisionMap.height / 2);
-
-  //     let foundPosition = false;
-
-  //     for (
-  //       let radius = 0;
-  //       radius < Math.max(collisionMap.width, collisionMap.height) &&
-  //       !foundPosition;
-  //       radius++
-  //     ) {
-  //       for (let dx = -radius; dx <= radius && !foundPosition; dx++) {
-  //         for (let dy = -radius; dy <= radius && !foundPosition; dy++) {
-  //           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
-
-  //           const testPos: TilePosition = {
-  //             x: centerX + dx,
-  //             y: centerY + dy,
-  //           };
-
-  //           if (isValidPosition(testPos)) {
-  //             console.log("✅ Found valid position:", testPos);
-  //             updatePosition(testPos);
-  //             foundPosition = true;
-  //           }
-  //         }
-  //       }
-  //     }
-
-  //     if (!foundPosition) {
-  //       console.warn("⚠️ No valid position found! Using fallback (1,1)");
-  //       updatePosition({ x: 1, y: 1 });
-  //     }
-  //   } else {
-  //     console.log("✅ Current position is valid:", playerPosition);
-  //   }
-
-  //   }, [collisionMap, isValidPosition, updatePosition]);
-
   // This part handles movement of character after load
   useEffect(() => {
     if (!collisionMap) return;
@@ -419,6 +378,55 @@ const Player = ({
     closestInteraction,
   ]);
 
+  useEffect(() => {
+    if (!collisionMap || !joystickMovement) return;
+  
+  const now = Date.now();
+  if (now - lastMoveTime.current < movementCooldown.current) return;
+
+  const { x, y } = joystickMovement;
+  const distance = Math.sqrt(x * x + y * y);
+  
+  
+  if (distance < movementThreshold.current) {
+    return;
+  }
+    const currentPos = ensureTilePosition(playerPosition);
+    let newPos: TilePosition = { ...currentPos };
+    const absX = Math.abs(x);
+    const absY = Math.abs(y);
+
+    if (absX > absY) {
+      // Horizontal movement
+      if (x > 0) {
+        newPos.x++; // Right
+      } else {
+        newPos.x--; // Left
+      }
+    } else {
+      // Vertical movement
+      if (y > 0) {
+        newPos.y++; // Down
+      } else {
+        newPos.y--; // Up
+      }
+    }
+
+    if (isValidPosition(newPos)) {
+      updatePosition(newPos);
+      socket.emit("user-move", { x: newPos.x, y: newPos.y });
+      lastMoveTime.current = now;
+    }
+  }, [
+    joystickMovement,
+    collisionMap,
+    playerPosition,
+    isValidPosition,
+    updatePosition,
+    socket,
+  ]);
+
+  
   return null;
 };
 

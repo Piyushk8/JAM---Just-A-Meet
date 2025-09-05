@@ -29,6 +29,7 @@
     "livekit-client": "^2.15.3",
     "lucide-react": "^0.542.0",
     "motion": "^12.23.12",
+    "nipplejs": "^0.10.2",
     "path": "^0.12.7",
     "phaser": "^3.90.0",
     "react": "^19.1.0",

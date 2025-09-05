@@ -12,8 +12,8 @@ import {
   TILE_SIZE,
   pixelToTile,
 } from "../lib/helper";
-import Computer from "./InteractionHandlers/Computer";
 import { useInteractionHandler } from "./InteractionHandlers";
+import Joystick from "@/components/JoyStick";
 
 const CAMERA_SMOOTH_FACTOR = 0.1; // Lower = smoother but slower (0.05-0.15 range)
 const CAMERA_DEAD_ZONE = 2; // Pixels - prevents micro-movements
@@ -27,15 +27,32 @@ export default function CanvasRenderer({
   mapData: TiledMap;
   tilesetImages: Record<string, HTMLImageElement>;
 }) {
+  const dispatch = useDispatch();
+  const onInteractionHandler = useInteractionHandler();
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const backgroundCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const [backgroundNeedsUpdate, setBackgroundNeedsUpdate] = useState(true);
-
+  const [joystickMovement, setJoystickMovement] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   });
+  const { currentUser, usersInRoom, nearbyParticipants } = useSelector(
+    (state: RootState) => state.roomState
+  );
+
+  const { closestInteraction } = useSelector(
+    (state: RootState) => state.interactionState
+  );
+  const { isComputer } = useSelector((state: RootState) => state.miscSlice);
+  const nearbyUserIds = new Set(nearbyParticipants);
 
   useEffect(() => {
     function handleResize() {
@@ -47,13 +64,26 @@ export default function CanvasRenderer({
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || "ontouchstart" in window);
+    };
 
-  const { currentUser, usersInRoom, nearbyParticipants } = useSelector(
-    (state: RootState) => state.roomState
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const handleJoystickMove = useCallback(
+    (movement: { x: number; y: number }) => {
+      setJoystickMovement(movement);
+    },
+    []
   );
 
-  const [camera, setCamera] = useState({ x: 0, y: 0 });
-  // Smooth camera update function
+  const handleJoystickEnd = useCallback(() => {
+    setJoystickMovement(null);
+  }, []);
 
   /**
    * This one takes current user postion according to camera and uses Linear interpolation to smoothely
@@ -62,6 +92,7 @@ export default function CanvasRenderer({
    * to prevent jitter
    *
    */
+  // Smooth camera update function
   const updateSmoothCamera = useCallback(() => {
     if (!currentUser || !mapData) return;
 
@@ -104,18 +135,6 @@ export default function CanvasRenderer({
     const intervalId = setInterval(updateSmoothCamera, 16); // ~60fps
     return () => clearInterval(intervalId);
   }, [updateSmoothCamera]);
-
-  const nearbyUserIds = new Set(nearbyParticipants);
-
-  const { availableInteractions, closestInteraction } = useSelector(
-    (state: RootState) => state.interactionState
-  );
-  const { isComputer, isVendingMachineOpen, isWhiteBoardOpen } = useSelector(
-    (state: RootState) => state.miscSlice
-  );
-
-  const dispatch = useDispatch();
-  const onInteractionHandler = useInteractionHandler();
 
   useEffect(() => {
     if (!currentUser) {
@@ -307,81 +326,93 @@ export default function CanvasRenderer({
     [characters, camera, nearbyUserIds]
   );
 
-const renderAllPlayerLabels = useCallback(
-  (ctx: CanvasRenderingContext2D, players: User[]) => {
-    ctx.font = "bold 14px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.lineWidth = 3;
+  const renderAllPlayerLabels = useCallback(
+    (ctx: CanvasRenderingContext2D, players: User[]) => {
+      ctx.font = "bold 14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.lineWidth = 3;
 
-    players.forEach((player) => {
-      if (!player.username) return;
+      players.forEach((player) => {
+        if (!player.username) return;
 
-      // Calculate screen position
-      let tilePos = ensureTilePosition({ x: player.x, y: player.y });
-      if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
+        // Calculate screen position
+        let tilePos = ensureTilePosition({ x: player.x, y: player.y });
+        if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
 
-      const pixelPos = tileToPixel(tilePos);
-      const screenX = pixelPos.x - camera.x;
-      const screenY = pixelPos.y - camera.y;
+        const pixelPos = tileToPixel(tilePos);
+        const screenX = pixelPos.x - camera.x;
+        const screenY = pixelPos.y - camera.y;
 
-      // Culling
-      if (
-        screenX < -50 ||
-        screenX > viewport.width + 50 ||
-        screenY < -20 ||
-        screenY > viewport.height + 20
-      ) {
-        return;
-      }
+        // Culling
+        if (
+          screenX < -50 ||
+          screenX > viewport.width + 50 ||
+          screenY < -20 ||
+          screenY > viewport.height + 20
+        ) {
+          return;
+        }
 
-      const textX = screenX + TILE_SIZE / 2;
-      const textY = screenY - 8;
+        const textX = screenX + TILE_SIZE / 2;
+        const textY = screenY - 8;
 
-      // Outline + username text
-      ctx.strokeStyle = "black";
-      ctx.strokeText(player.username, textX, textY);
-      ctx.fillStyle = "white";
-      ctx.fillText(player.username, textX, textY);
+        // Outline + username text
+        ctx.strokeStyle = "black";
+        ctx.strokeText(player.username, textX, textY);
+        ctx.fillStyle = "white";
+        ctx.fillText(player.username, textX, textY);
 
-      // Status dot position
-      const dotX = textX + ctx.measureText(player.username).width / 2 + 8;
-      const dotY = textY - 8;
-      const radius = 4;
+        // Status dot position
+        const dotX = textX + ctx.measureText(player.username).width / 2 + 8;
+        const dotY = textY - 8;
+        const radius = 4;
 
-      // Base color by availability
-      let baseColor;
-      switch (player.availability) {
-        case "idle": baseColor = "#7CFC00"; break;   // bright green
-        case "away": baseColor = "#FFD700"; break;   // gold
-        default: baseColor = "#EE4B2B"; break;       // red
-      }
+        // Base color by availability
+        let baseColor;
+        switch (player.availability) {
+          case "idle":
+            baseColor = "#7CFC00";
+            break; // bright green
+          case "away":
+            baseColor = "#FFD700";
+            break; // gold
+          default:
+            baseColor = "#EE4B2B";
+            break; // red
+        }
 
-      // Glow + shiny gradient
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = baseColor;
+        // Glow + shiny gradient
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = baseColor;
 
-      const gradient = ctx.createRadialGradient(dotX - 1, dotY - 1, 1, dotX, dotY, radius);
-      gradient.addColorStop(0, "white");       
-      gradient.addColorStop(0.3, baseColor);   
-      gradient.addColorStop(1, "black");       
+        const gradient = ctx.createRadialGradient(
+          dotX - 1,
+          dotY - 1,
+          1,
+          dotX,
+          dotY,
+          radius
+        );
+        gradient.addColorStop(0, "white");
+        gradient.addColorStop(0.3, baseColor);
+        gradient.addColorStop(1, "black");
 
-      ctx.beginPath();
-      ctx.arc(dotX, dotY, radius, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
 
-      ctx.shadowBlur = 0;
+        ctx.shadowBlur = 0;
 
-      ctx.beginPath();
-      ctx.arc(dotX - 1.2, dotY - 1.5, 1.3, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fill();
-    });
-  },
-  [camera]
-);
-
+        ctx.beginPath();
+        ctx.arc(dotX - 1.2, dotY - 1.5, 1.3, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.fill();
+      });
+    },
+    [camera]
+  );
 
   const isInteractionVisible = useCallback(
     (interaction: any) => {
@@ -547,9 +578,16 @@ const renderAllPlayerLabels = useCallback(
             playerImage={characters[0]}
             playerPosition={{ x: currentUser.x, y: currentUser.y }}
             onInteraction={onInteractionHandler}
+            joystickMovement={joystickMovement}
           />
         </div>
       </div>
+
+      {isMobile && (
+        <div className="absolute bottom-4 left-4">
+          <Joystick onMove={handleJoystickMove} onEnd={handleJoystickEnd} />
+        </div>
+      )}
     </div>
   );
 }
