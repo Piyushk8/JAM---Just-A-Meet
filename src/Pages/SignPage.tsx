@@ -32,15 +32,12 @@ const formHandler = async (
   formData: FormData
 ): Promise<AuthState> => {
   try {
-    // Debug: Log FormData contents properly
-    console.log("FormData entries:");
     for (const [key, value] of formData.entries()) {
       console.log(key, value);
     }
 
     const { username, password, mode } = getFormData<AuthFormFields>(formData);
 
-    // Validate required fields
     if (!username || !password || !mode) {
       return {
         success: false,
@@ -128,20 +125,13 @@ const SignPage = () => {
     e.preventDefault();
     setPending(true);
 
-    // Clear previous error state
     setState((prev) => ({ ...prev, error: null }));
 
     try {
       const formData = new FormData(e.currentTarget);
 
-      // Debug: Check if form data is being created properly
-      console.log("Form element:", e.currentTarget);
-      console.log("Form data size:", Array.from(formData.entries()).length);
-
       const result = await formHandler(state, formData);
-      setState(result);
     } catch (error) {
-      console.error("Submit error:", error);
       setState({
         success: false,
         error: "An unexpected error occurred during submission",
@@ -159,14 +149,11 @@ const SignPage = () => {
           username: state.user.userName,
         })
       );
-      // Navigate to join route after successful authentication
       setTimeout(() => {
         navigate("/join");
-      }, 2000); // 2 second delay to show success message
+      }, 1000);
     }
   }, [state, dispatch, navigate]);
-
-  // Reset state when switching between sign in/up
   useEffect(() => {
     setState({ success: false, error: null });
   }, [isSignInPage]);
@@ -273,7 +260,7 @@ const SignPage = () => {
             >
               <div className="p-4 bg-green-500/20 border border-green-400/30 rounded-xl backdrop-blur-sm">
                 <p className="text-green-300 font-semibold text-lg">
-                  ✅{" "}
+                  {" "}
                   {state.user.mode === "signin"
                     ? "Welcome back"
                     : "Account created"}
@@ -381,9 +368,9 @@ const SignPage = () => {
                     {isSignInPage ? "Signing in..." : "Signing up..."}
                   </span>
                 ) : isSignInPage ? (
-                  "Sign In 🚀"
+                  "Sign In "
                 ) : (
-                  "Sign Up 🎉"
+                  "Sign Up "
                 )}
               </motion.button>
 
