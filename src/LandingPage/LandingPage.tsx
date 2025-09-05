@@ -1,7 +1,9 @@
-import{ useMemo } from "react";
+import { useMemo } from "react";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router-dom";
 
 const VirtualHQLanding = () => {
+  const navigate = useNavigate()
   const cloudParts = [
     "assets/Clouds/Clouds 2/1.png",
     "assets/Clouds/Clouds 2/2.png",
@@ -114,6 +116,7 @@ const VirtualHQLanding = () => {
           className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-full text-white font-semibold shadow-lg"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          onClick={() => navigate("/join")}
         >
           Enter the Office 🚪
         </motion.button>
