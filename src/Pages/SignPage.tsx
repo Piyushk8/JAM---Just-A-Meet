@@ -32,10 +32,6 @@ const formHandler = async (
   formData: FormData
 ): Promise<AuthState> => {
   try {
-    for (const [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
-
     const { username, password, mode } = getFormData<AuthFormFields>(formData);
 
     if (!username || !password || !mode) {
@@ -44,8 +40,6 @@ const formHandler = async (
         error: "Username, password, and mode are required",
       };
     }
-
-    console.log("Extracted data:", { username, password, mode });
 
     let res;
     if (mode === "signin") {
@@ -75,7 +69,6 @@ const formHandler = async (
 
     return { success: false, error: res.data.message || "Unknown error" };
   } catch (err) {
-    console.error("Form handler error:", err);
     if (axios.isAxiosError(err) && err.response?.data?.message) {
       return { success: false, error: err.response.data.message };
     }
@@ -131,6 +124,7 @@ const SignPage = () => {
       const formData = new FormData(e.currentTarget);
 
       const result = await formHandler(state, formData);
+      setState(result);
     } catch (error) {
       setState({
         success: false,
