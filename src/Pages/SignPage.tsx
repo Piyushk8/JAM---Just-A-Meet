@@ -5,6 +5,7 @@ import { SERVER_URL } from "@/lib/consts";
 import { useDispatch } from "react-redux";
 import { setUserInfo } from "@/Redux/auth";
 import { useNavigate } from "react-router-dom";
+import { connectSocket } from "@/socket";
 
 type AuthState = {
   success: boolean;
@@ -124,6 +125,9 @@ const SignPage = () => {
       const formData = new FormData(e.currentTarget);
 
       const result = await formHandler(state, formData);
+      if (result.success === true && result.user?.id) {
+        connectSocket(result.user?.id.toString());
+      }
       setState(result);
     } catch (error) {
       setState({

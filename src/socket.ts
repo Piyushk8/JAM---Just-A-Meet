@@ -16,6 +16,9 @@ export const getSocket = (): SocketType => {
   socket.on("disconnect", (reason) => {
     console.warn("Socket disconnected. Reason:", reason);
   });
+  socket.on("connect",()=>{
+    console.log("socket connected")
+  })
 
   return socket;
 };
