@@ -9,19 +9,35 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, LockKeyhole } from "lucide-react";
 import type { RootState } from "@/Redux";
 import type { RoomThemes } from "@/Pages/JoinRoom";
-
+import { motion } from "motion/react";
 interface themeState {
   id: number;
   name: RoomThemes;
   image: string;
+  locked: boolean;
+  description: string;
 }
 const themes: themeState[] = [
-  { id: 1, name: "office 1", image: "/assets/Clouds/Clouds 1/1.png" },
-  { id: 4, name: "larger office", image: "/assets/Clouds/Clouds 1/1.png" },
+  {
+    id: 1,
+    name: "office 1",
+    image: "/assets/map/Office 1.webp",
+    locked: false,
+    description: "Spacious sky office with soothing ambiance.",
+  },
+  {
+    id: 4,
+    name: "larger office",
+    image: "/assets/map/Office 1.webp",
+    locked: true,
+    description: "Expand your workspace—perfect for larger groups.",
+  },
 ];
+
+//upcoming teasers
 
 export function ThemeCarousel() {
   const dispatch = useDispatch();
@@ -29,8 +45,10 @@ export function ThemeCarousel() {
     (state: RootState) => state.roomState.roomTheme
   );
 
-  const handleSelectTheme = (themeName: RoomThemes) => {
-    dispatch(setRoomTheme(themeName));
+  const handleSelectTheme = (theme: themeState) => {
+    if (!theme.locked) {
+      dispatch(setRoomTheme(theme.name));
+    }
   };
 
   return (
@@ -48,11 +66,20 @@ export function ThemeCarousel() {
                   className={`cursor-pointer hover:shadow-lg transition-shadow relative ${
                     isSelected ? "border-2 border-blue-500" : ""
                   }`}
-                  onClick={() => handleSelectTheme(theme.name)}
+                  onClick={() => handleSelectTheme(theme)}
                 >
                   <CardContent className="flex flex-col items-center justify-center p-3">
                     <div className="relative w-full aspect-square">
-                      {" "}
+                      {theme.locked && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            className="bg-white/90 backdrop-blur-sm rounded-full p-3"
+                          >
+                            <LockKeyhole className="w-6 h-6 text-gray-700" />
+                          </motion.div>
+                        </div>
+                      )}{" "}
                       {/* Full width with square ratio */}
                       <img
                         src={theme.image}
@@ -63,7 +90,20 @@ export function ThemeCarousel() {
                         <CheckCircle className="absolute top-2 right-2 text-blue-600 bg-white rounded-full" />
                       )}
                     </div>
-                    <h3 className="mt-2 text-lg font-medium">{theme.name}</h3>
+                    <h3 className="mt-4 font-mono text-center text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      {theme.name}
+                    </h3>
+
+                    <div className="max-w-sm p-4 bg-gray-200/50 backdrop-blur-3xl rounded-lg border border-gray-300 shadow-sm">
+                      <p className="text-sm text-slate-800 text-center font-mono">
+                        {theme.description}
+                      </p>
+                      {theme.locked && (
+                        <p className="text-xs text-gray-500 text-center mt-2 italic">
+                          Coming soon
+                        </p>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
