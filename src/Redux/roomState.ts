@@ -1,9 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type {
-  User,
-  UserAvailabilityStatus,
-} from "../types/types";
+import type { User, UserAvailabilityStatus } from "../types/types";
+import type { RoomThemes } from "@/Pages/JoinRoom";
 
 interface RoomState {
   currentUser: User | null;
@@ -12,34 +10,17 @@ interface RoomState {
   isVideoEnabled: boolean;
   roomId: string | null;
   usersInRoom: Record<string, User>;
+  roomTheme: RoomThemes | null;
 }
 
 const initialState: RoomState = {
   currentUser: null,
+  roomTheme: null,
   nearbyParticipants: [],
   isAudioEnabled: false,
   isVideoEnabled: false,
   roomId: null,
-  usersInRoom: {
-    // user1: {
-    //   id: "user1",
-    //   username: "piyush",
-    //   x: 0,
-    //   y: 0,
-    //   socketId: "",
-    //   roomId: "room1",
-    //   sprite: "",
-    // },
-    // user2: {
-    //   id: "user2",
-    //   username: "alex",
-    //   x: 5,
-    //   y: 5,
-    //   socketId: "",
-    //   roomId: "room1",
-    //   sprite: "",
-    // },
-  },
+  usersInRoom: {},
 };
 
 const livekitSlice = createSlice({
@@ -120,11 +101,20 @@ const livekitSlice = createSlice({
         };
       }
     },
+
+    setRoomTheme: (state, action: PayloadAction<RoomThemes>) => {
+      state.roomTheme = action.payload;
+    },
+    clearRoomTheme: (state, _action) => {
+      state.roomTheme = null;
+    },
   },
 });
 
 export const {
   addUserInRoom,
+  setRoomTheme,
+  clearRoomTheme,
   setAvailability,
   removeFromUsersInRoom,
   setCurrentUser,

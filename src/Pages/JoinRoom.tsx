@@ -5,6 +5,9 @@ import { setCurrentUser, updateUsersInRoom } from "../Redux/roomState";
 import { useDispatch } from "react-redux";
 import { useSocket } from "../SocketProvider";
 import type { JoinRoomResponse } from "@/types/types";
+import { ThemeCarousel } from "@/components/JoinRoom/ThemeCarousel";
+import { ArrowRight, AlertCircle } from "lucide-react";
+
 interface User {
   id: string;
   username: string;
@@ -15,11 +18,15 @@ interface User {
   isVideoEnabled?: boolean;
 }
 
+export type RoomThemes = "office 1" | "larger office";
+
 export const JoinRoom = () => {
   const socket = useSocket();
-  const [username, setUsername] = useState("");
+  const [IsJoining, setIsJoining] = useState<boolean>(false);
   const [roomName, setRoomName] = useState<string>("");
-  const [roomId, setRoomId] = useState<string>("");
+  const [roomTheme, setRoomTheme] = useState<null | RoomThemes>(null);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
   const dispatch = useDispatch();
   const nav = useNavigate();
 
@@ -29,7 +36,6 @@ export const JoinRoom = () => {
       dispatch(updateUsersInRoom(roomUsers));
     };
 
-    // Add event listeners
     socket.on("room-users", handleRoomUsers);
 
     return () => {
@@ -37,17 +43,40 @@ export const JoinRoom = () => {
     };
   }, [socket, dispatch]);
 
+  const clearMessages = () => {
+    setError("");
+    setSuccess("");
+  };
+
+  const handleRoomNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRoomName(e.target.value);
+    if (error) clearMessages();
+  };
+
   const joinRoom = async () => {
-    if (socket && username.trim()) {
+    clearMessages();
+
+    if (!roomName.trim()) {
+      setError("Room name is required");
+      return;
+    }
+
+    if (!socket) {
+      setError("Connection error. Please refresh and try again.");
+      return;
+    }
+
+    if (socket) {
       socket.emit(
         "join-room",
         {
-          roomId: roomId.trim() ?? undefined,
           roomName: roomName.trim() ?? undefined,
         },
         async (res: { success: boolean; data: JoinRoomResponse }) => {
           try {
+            setIsJoining(true);
             if (!res || !res.success || !res.data) {
+              setError("Failed to create space. Please try again.");
               console.log("Error in joining room");
             } else {
               if (!socket.id) return;
@@ -63,14 +92,18 @@ export const JoinRoom = () => {
                   roomId: roomId,
                   isAudioEnabled: false,
                   isVideoEnabled: false,
-                  sprite: sprite ?? "alex",
+                  sprite: "Adam",
                   availability: availability,
                 })
               );
-              nav(`/r/${roomId}`);
+              setSuccess("Space created successfully!");
+              nav("/lobby");
             }
           } catch (error) {
-            console.log("error joinig", error);
+            setError("An unexpected error occurred. Please try again.");
+            console.log("error joining", error);
+          } finally {
+            setTimeout(() => setIsJoining(false), 1000);
           }
         }
       );
@@ -78,49 +111,100 @@ export const JoinRoom = () => {
   };
 
   return (
-    <>
-      <div className="login-container h-screen w-screen flex items-center justify-center p-4">
-        <div className="login-form flex flex-col space-y-5 justify-center items-center ring-1 ring-sky-300 rounded-2xl h-1/2 w-1/2">
-          <h1 className="text-4xl font-bold text-balance ">
-            Join Virtual Office
-          </h1>
-          <div className="flex flex-col items-center justify-center gap-8">
-            <input
-              type="text"
-              placeholder="Enter your name"
-              value={username}
-              className="h-8 w-full rounded-2xl bg-gray-200 p-5 text-gray-800"
-              onChange={(e) => setUsername(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && joinRoom()}
-            />
-            <input
-              type="text"
-              placeholder="Room ID"
-              value={roomId}
-              className="bg-gray-200 h-8 w-full border-2 text-gray-900  border-sky-200 flex items-center justify-center p-5 rounded-2xl"
-              onChange={(e) => setRoomId(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Room Name"
-              value={roomName}
-              className="bg-gray-200 h-8 w-full border-2 text-gray-900  border-sky-200 flex items-center justify-center p-5 rounded-2xl"
-              onChange={(e) => setRoomName(e.target.value)}
-            />
-            <button
-              className="bg-sky-300 px-4 py-2 hover:bg-white border-sky-300 rounded-2xl border-1 font-semibold hover:text-sky-300 text-white"
-              onClick={joinRoom}
-              disabled={!username.trim()}
-            >
-              Join Room
-            </button>
+    <div
+      className="flex flex-col md:flex-row justify-center items-center w-full h-screen space-y-6 md:space-y-0 md:space-x-6 p-4
+    "
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        backgroundImage: `
+      radial-gradient(circle at 25% 25%, rgba(255,255,255,0.8) 1px, transparent 2px),
+      radial-gradient(circle at 75% 75%, rgba(255,255,255,0.6) 0.5px, transparent 1px),
+      radial-gradient(circle at 50% 10%, rgba(255,255,255,1) 1.5px, transparent 2px),
+      radial-gradient(circle at 10% 80%, rgba(255,255,255,0.4) 0.8px, transparent 1.5px),
+      radial-gradient(circle at 90% 20%, rgba(255,255,255,0.9) 1px, transparent 2px),
+      radial-gradient(circle at 30% 60%, rgba(255,255,255,0.5) 0.6px, transparent 1px),
+      radial-gradient(circle at 80% 90%, rgba(255,255,255,0.7) 1.2px, transparent 2px),
+      radial-gradient(circle at 15% 40%, rgba(255,255,255,0.3) 0.4px, transparent 1px),
+      linear-gradient(360deg, hsla(228, 27%, 29%, 1) 19%, hsla(227, 82%, 4%, 1) 100%)
+    `,
+        backgroundSize:
+          "300px 300px, 200px 200px, 400px 400px, 250px 250px, 350px 350px, 180px 180px, 320px 320px, 150px 150px, 100% 100%",
+        backgroundPosition:
+          "0 0, 100px 50px, 200px 100px, 50px 200px, 150px 0px, 250px 150px, 300px 50px, 0px 100px, 0 0",
+        backgroundRepeat: "repeat",
+      }}
+    >
+      {/* Simple message display */}
+      {(error || success) && (
+        <div className="fixed top-4 right-4 z-50">
+          <div
+            className={`flex items-center gap-2 px-4 py-2 rounded-md shadow-md ${
+              error
+                ? "bg-red-50 text-red-700 border border-red-200"
+                : "bg-green-50 text-green-700 border border-green-200"
+            }`}
+          >
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-sm">{error || success}</span>
           </div>
-          <p className="privacy-notice text-red-300 text-balance font-semibold text-sm text-left">
-            📱 Audio & Video access will be requested for voice chat
-          </p>
+        </div>
+      )}
+
+      {/* Theme selection */}
+      <div className="w-full max-w-xs relative overflow-hidden md:overflow-visible">
+        <h2 className="text-lg font-medium text-center mb-3">
+          Select a Room Theme
+        </h2>
+        <div className="w-full md:mr-5">
+          <ThemeCarousel />
         </div>
       </div>
-    </>
+
+      {/* Room name input */}
+      <div className="w-full md:ml-10 max-w-xs flex flex-col space-y-4">
+        <div className="flex flex-col">
+          <label className="text-sm mb-1 text-white">Enter Space Name</label>
+          <input
+            type="text"
+            placeholder="Room Name"
+            value={roomName}
+            onChange={handleRoomNameChange}
+            disabled={IsJoining}
+            className={`w-full px-4 text-white py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors ${
+              error
+                ? "border-red-300 focus:ring-red-500"
+                : "border-gray-300 focus:ring-blue-500"
+            } ${IsJoining ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          />
+          {error && <span className="text-xs text-red-600 mt-1">{error}</span>}
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            className={`px-6 py-2 rounded-2xl transition flex items-center gap-2 ${
+              IsJoining || !roomName.trim()
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+            onClick={joinRoom}
+            disabled={IsJoining || !roomName.trim()}
+          >
+            {IsJoining ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                Create space
+                <ArrowRight className="inline size-5 ml-2" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

@@ -16,6 +16,8 @@ export interface UserInfo {
   availability?: UserAvailabilityStatus;
 }
 
+export type SpriteNames = "Ash" | "Lucy" | "Nancy" | "Adam";
+export const Sprites: SpriteNames[] = ["Ash", "Lucy", "Nancy", "Adam"];
 export interface User {
   id: string;
   availability: UserAvailabilityStatus;
@@ -24,20 +26,17 @@ export interface User {
   y: number;
   renderX?: number;
   renderY?: number;
-
   socketId: string;
   roomId?: string;
   isAudioEnabled?: boolean;
   isVideoEnabled?: boolean;
-  sprite?: string | null;
+  sprite: SpriteNames;
 }
 
 export interface Room {
   id: string;
   users: Map<string, User>;
 }
-
-
 
 export interface ProximityUser extends User {
   distance: number;
@@ -86,10 +85,10 @@ export type ServerToClient = {
     targetUserId: string;
     conversation?: any;
   }) => void;
-  
+
   "chat:message": (chatMessage: ChatMessage) => void;
-"chat:startTyping":(data:TypingUser)=>void
-  "chat:stopTyping":({userId}:{userId:string})=>void
+  "chat:startTyping": (data: TypingUser) => void;
+  "chat:stopTyping": ({ userId }: { userId: string }) => void;
 };
 
 export interface JoinRoomResponse {
@@ -153,8 +152,8 @@ export type ClientToServer = {
     conversationId: string;
   }) => void;
   "chat:message": (chatMessage: ChatMessage) => void;
-  "chat:startTyping":(data:TypingUser)=>void
-  "chat:stopTyping":({userId}:{userId:string})=>void
+  "chat:startTyping": (data: TypingUser) => void;
+  "chat:stopTyping": ({ userId }: { userId: string }) => void;
 };
 
 // userId used for live kit

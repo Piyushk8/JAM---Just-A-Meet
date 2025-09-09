@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { fetchCurrentUser } from "./Redux/auth";
 import type { AppDispatch } from "./Redux";
 import Landing from "./LandingPage/LandingPage";
+import WarmUpLobby from "./Pages/WarmUpLobby";
 
 function App() {
   const dispatch = useDispatch<AppDispatch>();
@@ -37,6 +38,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PhaserRoom />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={`/lobby`}
+              element={
+                <ProtectedRoute>
+                  <WarmUpLobby />
                 </ProtectedRoute>
               }
             />
