@@ -95,7 +95,7 @@ export interface JoinRoomResponse {
   user: {
     userName: string;
     userId: string;
-    sprite?: string;
+    sprite:SpriteNames;
     availability: UserAvailabilityStatus;
   };
   room: {

@@ -30,19 +30,6 @@ export const JoinRoom = () => {
   const dispatch = useDispatch();
   const nav = useNavigate();
 
-  useEffect(() => {
-    const handleRoomUsers = (roomUsers: User[]) => {
-      console.log("roomUsers", roomUsers);
-      dispatch(updateUsersInRoom(roomUsers));
-    };
-
-    socket.on("room-users", handleRoomUsers);
-
-    return () => {
-      socket.off("room-users", handleRoomUsers);
-    };
-  }, [socket, dispatch]);
-
   const clearMessages = () => {
     setError("");
     setSuccess("");

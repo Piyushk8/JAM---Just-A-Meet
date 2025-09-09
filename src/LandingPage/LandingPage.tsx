@@ -1,16 +1,21 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { JoinRoomDialog } from "./JoinRoomDialog";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/Redux";
 
 const VirtualHQLanding = () => {
-  const navigate = useNavigate()
+  const [JoinRoom, setJoinRoom] = useState(false);
+  const navigate = useNavigate();
   const cloudParts = [
     "assets/Clouds/Clouds 2/1.png",
     "assets/Clouds/Clouds 2/2.png",
     "assets/Clouds/Clouds 2/3.png",
     "assets/Clouds/Clouds 2/4.png",
   ];
-
+  const { userInfo } = useSelector((state: RootState) => state.authSlice);
+  
   const characters = [
     { name: "Adam", path: "assets/character/single/Adam_idle_anim_2.png" },
     { name: "Ash", path: "assets/character/single/Ash_idle_anim_2.png" },
@@ -27,6 +32,9 @@ const VirtualHQLanding = () => {
       delay: Math.random() * 2,
     }));
   }, []);
+  const handleJoinRoom = () => {
+    setJoinRoom(true);
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 overflow-hidden relative">
@@ -112,14 +120,25 @@ const VirtualHQLanding = () => {
           A 2D metaverse for your remote team — explore, collaborate, and have
           fun together.
         </motion.p>
-        <motion.button
-          className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-full text-white font-semibold shadow-lg"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => navigate("/join")}
-        >
-          Enter the Office 🚪
-        </motion.button>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-5">
+          <motion.button
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 px-8 py-4 rounded-full text-white font-semibold shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/join")}
+          >
+            Create a Space
+          </motion.button>
+
+          <motion.button
+            className="bg-gradient-to-r  from-gray-200 to-white px-8 py-4 rounded-full text-black font-semibold shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleJoinRoom}
+          >
+            <JoinRoomDialog />
+          </motion.button>
+        </div>
       </div>
     </div>
   );

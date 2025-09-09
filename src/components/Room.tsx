@@ -132,6 +132,12 @@ export default function PhaserRoom() {
       liveKitManager.syncSubscriptions([joined], [left]);
       console.log("conversation updated");
     };
+    const handleRoomUsers = (roomUsers: User[]) => {
+      console.log("roomUsers", roomUsers);
+      dispatch(updateUsersInRoom(roomUsers));
+    };
+
+    socket.on("room-users", handleRoomUsers);
     socket.on("connect", handleConnect);
     socket.on("user-joined", handleUserJoined);
     socket.on("user-left", handleUserLeft);
@@ -148,6 +154,7 @@ export default function PhaserRoom() {
       socket.off("user-media-state-changed", handleUserMediaStateChanged);
       socket.off("conversation-updated", handleConversationUpdated);
       socket.off("incoming-invite", handleIncomingInvite);
+      socket.off("room-users", handleRoomUsers);
       liveKitManager?.cleanup();
     };
   }, [socket, dispatch, liveKitManager]);
@@ -155,7 +162,6 @@ export default function PhaserRoom() {
   // join room effect
   useEffect(() => {
     if (!socket) return;
-
     const { roomId } = params;
 
     socket.emit(
@@ -181,7 +187,7 @@ export default function PhaserRoom() {
             roomId: room.roomId,
             isAudioEnabled: false,
             isVideoEnabled: false,
-            sprite: user.sprite ?? "alex",
+            sprite: user.sprite,
             availability: user.availability,
           })
         );

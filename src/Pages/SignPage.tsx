@@ -148,7 +148,7 @@ const SignPage = () => {
         })
       );
       setTimeout(() => {
-        navigate("/join");
+        navigate("/");
       }, 1000);
     }
   }, [state, dispatch, navigate]);
