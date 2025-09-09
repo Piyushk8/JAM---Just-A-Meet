@@ -54,7 +54,6 @@ export default function PhaserRoom() {
 
   // live kit connection
   useEffect(() => {
-    console.log(params, currentUser);
     if (currentUser?.id && params.roomId) {
       handleConnectToLiveKitRoom();
     }
@@ -67,7 +66,7 @@ export default function PhaserRoom() {
   // socket handlers set up
   useEffect(() => {
     const handleConnect = () => {
-      console.log("Connected to server with socket ID:", socket.id);
+      // console.log("Connected to server with socket ID:", socket.id);
     };
     const handleUserJoined = (user: User) => {
       if (user.id !== socket.id) {
@@ -128,14 +127,11 @@ export default function PhaserRoom() {
       joined,
     }: ConversationUpdatePayload) => {
       if (!conversationId) return;
-      console.log("conversation updating");
       dispatch(addUserInConversation(joined));
       dispatch(removeFromConversation(left));
       liveKitManager.syncSubscriptions([joined], [left]);
-      console.log("conversation updated");
     };
     const handleRoomUsers = (roomUsers: User[]) => {
-      console.log("roomUsers", roomUsers);
       dispatch(updateUsersInRoom(roomUsers));
     };
 
@@ -198,13 +194,11 @@ export default function PhaserRoom() {
   }, [socket, params.roomId]);
 
   const handleConnectToLiveKitRoom = async () => {
-    console.log(currentUser?.id, params, isConnecting);
     if (!currentUser?.id || !params.roomId || isConnecting) return;
     if (liveKitManager.room?.state == "connected") return;
     try {
       setIsConnecting(true);
-      console.log("Connecting to LiveKit room...");
-
+  
       const token = await fetchLiveKitToken(currentUser?.id, params.roomId);
 
       await liveKitManager.join({
@@ -218,9 +212,7 @@ export default function PhaserRoom() {
       dispatch(setIsAudioEnabled(false));
       dispatch(setIsVideoEnabled(false));
 
-      console.log("Successfully connected to LiveKit room");
     } catch (error) {
-      console.error("Failed to connect to LiveKit room:", error);
     } finally {
       setIsConnecting(false);
     }

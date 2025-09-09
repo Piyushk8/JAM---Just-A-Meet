@@ -215,12 +215,6 @@ const Player = ({
     const unsubscribe = manager.subscribe((event: InteractionEvent) => {
       switch (event.type) {
         case "available":
-          console.log(
-            "✨ Interaction available:",
-            event.object?.type,
-            event.objectId,
-            event.position
-          );
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
           dispatchInteractable(
             dispatch,
@@ -229,12 +223,6 @@ const Player = ({
           break;
 
         case "lost":
-          console.log(
-            "❌ Interaction lost:",
-            event.objectId,
-            manager.getAvailableInteractions(),
-            manager.getClosestInteraction(playerPosition)
-          );
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
 
           dispatchInteractable(
@@ -244,11 +232,6 @@ const Player = ({
           break;
 
         case "triggered":
-          console.log(
-            "🎯 Interaction triggered:",
-            event.object?.type,
-            event.objectId
-          );
           if (event.object && onInteraction) {
             onInteraction(event);
           }
@@ -360,7 +343,7 @@ const Player = ({
         updatePosition(newPos);
         socket.emit("user-move", { x: newPos.x, y: newPos.y });
       } else {
-        console.log("🚫 Movement blocked to:", newPos);
+        // console.log("🚫 Movement blocked to:", newPos);
       }
     };
 

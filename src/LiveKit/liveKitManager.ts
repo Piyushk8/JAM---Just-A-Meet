@@ -109,8 +109,7 @@ class LiveKitManager {
       await this.room.connect(url, token, {
         autoSubscribe: false,
       });
-      console.log("connected to room", this.room.name);
-
+     
       if (enableVideo) {
         try {
           await this.enableVideo();
@@ -131,7 +130,6 @@ class LiveKitManager {
       }
 
       this.managerState = "connected";
-      console.log("attempt complete", this.room);
       return this.room;
     } catch (error) {
       console.error("Error joining room:", error);
@@ -164,7 +162,6 @@ class LiveKitManager {
 
   private async enableVideo(): Promise<void> {
     if (!this.room || this.videoState.track || this.videoState.isPublishing) {
-      console.log("Video already enabled or enabling in progress");
       return;
     }
 
@@ -215,7 +212,7 @@ class LiveKitManager {
             this.createTimeoutPromise(3000, "Video unpublish timeout"),
           ]);
         } catch (err) {
-          console.warn("Unpublish failed:", err);
+          // console.warn("Unpublish failed:", err);
         }
       }
 
@@ -223,7 +220,7 @@ class LiveKitManager {
       this.videoState.track = undefined;
       this.videoState.element = undefined;
     } catch (error) {
-      console.error("Error during video disable:", error);
+      // console.error("Error during video disable:", error);
     } finally {
       this.videoState.isUnpublishing = false;
     }
@@ -481,7 +478,7 @@ class LiveKitManager {
       }
       return undefined;
     } catch (error) {
-      console.error("Error finding remote participant:", error);
+      // console.error("Error finding remote participant:", error);
       return undefined;
     }
   }
@@ -508,7 +505,7 @@ class LiveKitManager {
         )
         .on(RoomEvent.TrackPublished, this.handleTrackPublished);
     } catch (error) {
-      console.error("Error setting up event handlers:", error);
+      // console.error("Error setting up event handlers:", error);
     }
   }
 
@@ -523,7 +520,7 @@ class LiveKitManager {
         }
       }
     } catch (error) {
-      console.error("Error in handleTrackPublished:", error);
+      // console.error("Error in handleTrackPublished:", error);
     }
   };
 
@@ -531,40 +528,34 @@ class LiveKitManager {
     try {
       if (!this.room) return;
 
-      console.log("Participant connected:", p.identity);
-
+     
       if (this.pendingToSubscribeToTrackIDs.has(p.identity)) {
-        console.log("Processing pending subscription for:", p.identity);
         this.subscribedToTrackIDs.add(p.identity);
 
         p.getTrackPublications().forEach((pub) => {
           try {
             (pub as RemoteTrackPublication).setSubscribed(true);
-            console.log(
-              `Auto-subscribed to ${pub.kind} track from ${p.identity}`
-            );
           } catch (error) {
-            console.warn(
-              `Failed to auto-subscribe to track from ${p.identity}:`,
-              error
-            );
+            // console.warn(
+            //   `Failed to auto-subscribe to track from ${p.identity}:`,
+            //   error
+            // );
           }
         });
 
         this.pendingToSubscribeToTrackIDs.delete(p.identity);
       }
     } catch (error) {
-      console.error("Error in handleParticipantConnected:", error);
+      // console.error("Error in handleParticipantConnected:", error);
     }
   };
 
   private handleParticipantDisconnected = (p: RemoteParticipant) => {
     try {
-      console.log("Participant disconnected:", p.identity);
       this.subscribedToTrackIDs.delete(p.identity);
       this.pendingToSubscribeToTrackIDs.delete(p.identity);
     } catch (error) {
-      console.error("Error in handleParticipantDisconnected:", error);
+      // console.error("Error in handleParticipantDisconnected:", error);
     }
   };
 
@@ -614,18 +605,15 @@ class LiveKitManager {
     participant: RemoteParticipant
   ) => {
     try {
-      console.log(
-        `Track unsubscribed: ${track.kind} from ${participant.identity}`
-      );
       this.trackUnsubscribedCallbacks.forEach((cb) => {
         try {
           cb(participant.identity, track, publication);
         } catch (error) {
-          console.warn("Error in track unsubscribed callback:", error);
+          // console.warn("Error in track unsubscribed callback:", error);
         }
       });
     } catch (error) {
-      console.error("Error in handleTrackUnsubscribed:", error);
+      // console.error("Error in handleTrackUnsubscribed:", error);
     }
   };
 
@@ -641,18 +629,17 @@ class LiveKitManager {
     try {
       // update UI for active speakers if you want
     } catch (error) {
-      console.error("Error in handleActiveSpeakersChanged:", error);
+      // console.error("Error in handleActiveSpeakersChanged:", error);
     }
   };
 
   private handleDisconnected = () => {
     try {
-      console.log("disconnected from room");
       this.managerState = "disconnected";
       this.subscribedToTrackIDs.clear();
       this.pendingToSubscribeToTrackIDs.clear();
     } catch (error) {
-      console.error("Error in handleDisconnected:", error);
+      // console.error("Error in handleDisconnected:", error);
     }
   };
 
@@ -661,7 +648,7 @@ class LiveKitManager {
       if (!this.room) return;
       if (!this.room.canPlaybackAudio) {
         const btn = document.createElement("button");
-        btn.textContent = "Click to enable audio";
+        // btn.textContent = "Click to enable audio";
         btn.onclick = () => this.room?.startAudio().then(() => btn.remove());
         document.body.appendChild(btn);
       }

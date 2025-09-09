@@ -20,7 +20,6 @@ export const useInteractionHandler = () => {
 
   const handler = useCallback(
     (event: InteractionEvent) => {
-      console.log("event",event)
       if (event.type === "triggered") {
         const interactionType = closestInteraction?.type ?? event.object?.type;
 

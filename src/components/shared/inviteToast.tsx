@@ -70,7 +70,6 @@ export default function InvitationToasts() {
   
   const onAccept = (invitationId: string) => {
   const [invitation] = invitations.filter((i) => i.id == invitationId);
-  console.log(invitation, currentUser);
   if (!currentUser) return;
   
   socket.emit(
@@ -99,26 +98,18 @@ export default function InvitationToasts() {
           );
         }
         
-        console.log("[accept]: Enabling media and subscribing...");
         liveKitManager.toggleVideo(true);
         liveKitManager.toggleAudio(true);
         
-        // Subscribe to existing participants
         const otherMembers = conversation?.members.filter((m) => m != currentUser.id) ?? [];
-        console.log("[accept]: Subscribing to members:", otherMembers);
         liveKitManager.syncSubscriptions(otherMembers, []);
         
-        // Additional refresh after a delay to catch any missed tracks
         setTimeout(() => {
-          console.log("[accept]: Force refreshing all subscriptions");
           liveKitManager.forceRefreshAllSubscriptions();
         }, 1000);
         
         dispatch(openCallScreen());
-        console.log("[accept]: Setup complete");
-      } else {
-        console.log("invitation expired");
-      }
+      } 
     }
   );
 
@@ -145,7 +136,7 @@ export default function InvitationToasts() {
     }
   };
   return (
-    <div className="fixed bottom-4 right-4 space-y-2">
+    <div className="fixed bottom-4 right-4 space-y-2 z-60">
       {invitations
         // .filter((inv) => inv.status === "pending")
         .map((inv) => (

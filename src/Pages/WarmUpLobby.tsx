@@ -57,13 +57,6 @@ const WarmUpLobby = () => {
     );
   }, [hasVideoPermission, hasAudioPermission, currentUser?.sprite]);
 
-  console.log(
-    canEnterRoom,
-    hasAudioPermission,
-    hasVideoPermission,
-    currentUser?.sprite
-  );
-
   useEffect(() => {
     const getDevices = async () => {
       const devices = await navigator.mediaDevices.enumerateDevices();

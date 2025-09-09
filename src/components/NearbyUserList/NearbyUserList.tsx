@@ -55,7 +55,7 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
   return (
     <div
       className={`
-        fixed left-4 bottom-4 z-50 w-64
+        fixed left-4 bottom-4 z-30 w-64
         bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20
         transition-all duration-300 ease-out
         ${isOpen ? "h-auto max-h-96" : "h-12"}

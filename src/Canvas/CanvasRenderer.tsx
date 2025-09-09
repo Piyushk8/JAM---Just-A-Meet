@@ -14,6 +14,7 @@ import {
 } from "../lib/helper";
 import { useInteractionHandler } from "./InteractionHandlers";
 import Joystick from "@/components/JoyStick";
+import MainLoader from "@/components/MainLoader";
 
 const CAMERA_SMOOTH_FACTOR = 0.1; // Lower = smoother but slower (0.05-0.15 range)
 const CAMERA_DEAD_ZONE = 2; // Pixels - prevents micro-movements
@@ -46,6 +47,9 @@ export default function CanvasRenderer({
   });
   const { currentUser, usersInRoom, nearbyParticipants } = useSelector(
     (state: RootState) => state.roomState
+  );
+  const { loading: userLoading } = useSelector(
+    (state: RootState) => state.authSlice
   );
 
   const { closestInteraction } = useSelector(
@@ -138,7 +142,6 @@ export default function CanvasRenderer({
 
   useEffect(() => {
     if (!currentUser) {
-      console.log("🚀 Initializing user with default tile position");
       dispatch(
         updateCurrentUser({
           id: "user-" + Math.random().toString(36).substr(2, 9),
@@ -149,8 +152,12 @@ export default function CanvasRenderer({
     }
   }, [currentUser, dispatch]);
 
-  if (!currentUser) {
-    return <div>Initializing player...</div>;
+  if (!currentUser || userLoading) {
+    return (
+      <div>
+        <MainLoader />
+      </div>
+    );
   }
 
   const renderBackground = useCallback(() => {
