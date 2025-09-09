@@ -1,19 +1,20 @@
 import { useDispatch } from "react-redux";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { openUserControls } from "@/Redux/misc";
+import {motion} from "motion/react"
+
 const UserControlButton = () => {
     const dispatch = useDispatch()
     const onClickHandler = ()=>{
-      console.log("here")
         dispatch(openUserControls())
     }
   return (
-    <button className="absolute z-30 top-5 right-5 rounded-full p-1" onClick={onClickHandler}>
-      <Avatar>
+    <motion.button whileHover={{scale:1.1}} className="rounded-full p-1" onClick={onClickHandler}>
+      <Avatar className="h-10 w-10">
         <AvatarImage src="https://github.com/shadcn.png" />
         <AvatarFallback>CN</AvatarFallback>
       </Avatar>
-    </button>
+    </motion.button>
   );
 };
 

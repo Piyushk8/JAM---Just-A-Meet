@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../Redux";
-import {
-  ChevronUp,
-  ChevronDown,
-  PhoneCallIcon,
-} from "lucide-react";
+import { ChevronUp, ChevronDown, PhoneCallIcon } from "lucide-react";
 import { useSocket } from "@/SocketProvider";
 import type { Conversation } from "@/types/types";
 import { addConversation, openCallScreen } from "@/Redux/misc";
@@ -24,15 +20,10 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
     nearbyParticipants.includes(u.id)
   );
 
-  const handleInviteOnCallWithId = (id: string) => {
-    return (_event: React.MouseEvent) => {
-      handleInviteOnCall(id);
-    };
-  };
   const handleInviteOnCall = (userId: string) => {
     if (!userId) return;
 
-    socket.emit(
+    socket?.emit(
       "call:invite",
       { targetUserId: userId },
       (res: { success: boolean; conversation: Conversation }) => {
@@ -45,14 +36,14 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
             members: conversation.members,
             pending: conversation.pending,
             creator: conversation.creator,
-            status:"pending"
+            status: "pending",
           })
         );
         dispatch(openCallScreen());
       }
     );
-    console.log("invitation sent from FE");
   };
+
   const statusColors: Record<string, string> = {
     available: "bg-green-500",
     idle: "bg-green-500",
@@ -64,77 +55,78 @@ const NearbyUsers: React.FC<NearbyUsersProps> = () => {
   return (
     <div
       className={`
-        fixed left-0 bottom-0 z-50
-        w-56 sm:w-64 md:w-72
-        bg-white dark:bg-gray-900 rounded-t-lg shadow-lg
-        flex flex-col
-        transition-all duration-300 ease-in-out
-        ${isOpen ? "max-h-[50vh]" : "max-h-10"}
+        fixed left-4 bottom-4 z-50 w-64
+        bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/20
+        transition-all duration-300 ease-out
+        ${isOpen ? "h-auto max-h-96" : "h-12"}
       `}
     >
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 h-10 bg-slate-400 cursor-pointer rounded-t-lg"
+        className="flex items-center justify-between px-4 h-12 cursor-pointer hover:bg-white/10 rounded-t-2xl transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <h3 className="text-base font-semibold text-gray-700 dark:text-gray-300">
+        <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
           Nearby
+          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+            {nearbyUsers.length}
+          </span>
         </h3>
         {isOpen ? (
-          <ChevronDown className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          <ChevronDown className="w-4 h-4 text-gray-600" />
         ) : (
-          <ChevronUp className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+          <ChevronUp className="w-4 h-4 text-gray-600" />
         )}
       </div>
 
-      <div
-        className={`
-          overflow-y-auto px-3 py-2 transition-opacity duration-200
-          ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}
-        `}
-        style={{
-          maxHeight: "calc(50vh - 2.5rem)", 
-        }}
-      >
-        {nearbyUsers?.length ? (
-          nearbyUsers.map((user) => (
-            <div
-              key={user.id}
-              className="flex items-center gap-3 p-2 rounded-md cursor-pointer"
-            >
-              <img
-                src={user.sprite || "https://github.com/shadcn.png"}
-                alt={user.username}
-                className="w-10 h-10 md:w-12 md:h-12 rounded-full"
-              />
-              <div className="flex-1">
-                <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200">
-                  {user.username}
-                </p>
-              </div>
-              {user.availability == "idle" && (
-                <>
-                  <div
-                    onClick={handleInviteOnCallWithId(user.id)}
-                    className="hover:bg-slate-200 p-2 rounded-full h-fit w-fit"
+      {/* Content */}
+      {isOpen && (
+        <div className="px-3 pb-3 space-y-2 max-h-80 overflow-y-auto">
+          {nearbyUsers?.length ? (
+            nearbyUsers.map((user) => (
+              <div
+                key={user.id}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors group"
+              >
+                <div className="relative">
+                  <img
+                    src={user.sprite || "https://github.com/shadcn.png"}
+                    alt={user.username}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <span
+                    className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                      statusColors[user.availability]
+                    }`}
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800">
+                    {user.username}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {user.availability}
+                  </p>
+                </div>
+
+                {user.availability === "idle" && (
+                  <button
+                    onClick={() => handleInviteOnCall(user.id)}
+                    className="p-2 rounded-full hover:bg-blue-100 text-blue-600 transition-colors opacity-0 group-hover:opacity-100"
                   >
-                    <PhoneCallIcon className="size-5 hover:size-4 duration-200 text-foreground" />
-                  </div>
-                </>
-              )}
-              <span
-                className={`w-3 h-3 md:w-4 md:h-4 rounded-full  transition-shadow duration-200 hover:shadow-[0_0_20px_rgba(34,197,94,0.8)] ${
-                  statusColors[user.availability]
-                }`}
-              />
+                    <PhoneCallIcon className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-500">No one nearby</p>
             </div>
-          ))
-        ) : (
-          <p className="text-sm md:text-base text-gray-500 dark:text-gray-400">
-            No one nearby
-          </p>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

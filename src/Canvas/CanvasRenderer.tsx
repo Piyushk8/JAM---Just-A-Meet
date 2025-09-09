@@ -301,8 +301,24 @@ export default function CanvasRenderer({
         const iconSize = 12;
         const iconY = screenY - 24;
 
+        // Audio icon with better styling
+        const audioColor = player.isAudioEnabled ? "#10b981" : "#ef4444"; // green-500 : red-500
+        const audioBg = player.isAudioEnabled ? "#dcfce7" : "#fee2e2"; // green-50 : red-50
+
+        // Background circle for audio
+        ctx.fillStyle = audioBg;
+        ctx.beginPath();
+        ctx.arc(
+          screenX + TILE_SIZE / 2 - 10,
+          iconY,
+          iconSize / 2 + 2,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
         // Audio icon
-        ctx.fillStyle = player.isAudioEnabled ? "green" : "red";
+        ctx.fillStyle = audioColor;
         ctx.beginPath();
         ctx.arc(
           screenX + TILE_SIZE / 2 - 10,
@@ -313,14 +329,42 @@ export default function CanvasRenderer({
         );
         ctx.fill();
 
-        // Video icon
-        ctx.fillStyle = player.isVideoEnabled ? "green" : "red";
+        // Video icon with better styling
+        const videoColor = player.isVideoEnabled ? "#10b981" : "#ef4444"; // green-500 : red-500
+        const videoBg = player.isVideoEnabled ? "#dcfce7" : "#fee2e2"; // green-50 : red-50
+
+        // Background for video
+        ctx.fillStyle = videoBg;
         ctx.fillRect(
+          screenX + TILE_SIZE / 2 + 2 - 2,
+          iconY - iconSize / 2 - 2,
+          iconSize + 4,
+          iconSize + 4
+        );
+
+        // Rounded corners for background
+        ctx.beginPath();
+        ctx.roundRect(
+          screenX + TILE_SIZE / 2 + 2 - 2,
+          iconY - iconSize / 2 - 2,
+          iconSize + 4,
+          iconSize + 4,
+          3
+        );
+        ctx.fillStyle = videoBg;
+        ctx.fill();
+
+        // Video icon
+        ctx.fillStyle = videoColor;
+        ctx.beginPath();
+        ctx.roundRect(
           screenX + TILE_SIZE / 2 + 2,
           iconY - iconSize / 2,
           iconSize,
-          iconSize
+          iconSize,
+          2
         );
+        ctx.fill();
       }
     },
     [characters, camera, nearbyUserIds]
@@ -510,7 +554,7 @@ export default function CanvasRenderer({
   }, [mapData, tilesetImages, renderBackground, render]);
 
   return (
-    <div className="relative w-full h-screen bg-sky-300 overflow-hidden">
+    <div className="fixed inset-0 bg-sky-300 overflow-hidden">
       {isComputer &&
         closestInteraction &&
         isInteractionVisible(closestInteraction) && (

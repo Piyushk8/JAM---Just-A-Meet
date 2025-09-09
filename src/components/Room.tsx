@@ -36,6 +36,8 @@ import { v4 as UUID } from "uuid";
 import CallScreen from "./Conversation/ConversationScreen";
 import ChatPanel from "./ChatPanel";
 import RoomMediaBar from "./TopMediaBar/RoomMedia";
+import InviteToRoom from "./roomComponents/InviteToRoom";
+import RoomHeader from "./roomComponents/RoomHeader";
 
 // const ROOM_WIDTH = 1200;
 // const ROOM_HEIGHT = 800;
@@ -227,13 +229,13 @@ export default function PhaserRoom() {
   return (
     <div className="relative z-0">
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
+      <RoomHeader/>
       <Canvas />
       <NearbyUsers />
       <RoomMediaBar position="top" showControls />
       <ChatPanel />
       <InvitationToasts />
       {OnGoingConversations && <CallScreen />}
-      {isUserControlsOpen ? <UserControls /> : <UserControlButton />}
     </div>
   );
 }
