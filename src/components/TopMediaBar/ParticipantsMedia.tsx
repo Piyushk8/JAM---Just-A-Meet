@@ -109,7 +109,7 @@ const ParticipantMedia: React.FC<ParticipantMediaProps> = ({
           {/* Video loading state */}
           {videoTrack && !isVideoReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-700 text-white text-xs">
-              Loading...
+              {/* Loading... */}
             </div>
           )}
 

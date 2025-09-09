@@ -1,4 +1,5 @@
 // ProtectedRoute.tsx
+import MainLoader from "@/components/MainLoader";
 import type { RootState } from "@/Redux";
 import React, { type JSX } from "react";
 import { useSelector } from "react-redux";
@@ -11,7 +12,12 @@ const ProtectedRoute: React.FC<Props> = ({ children }) => {
     (state: RootState) => state.authSlice
   );
 
-  if (loading) return <div>Loading...</div>;
+  if (loading)
+    return (
+      <div>
+        <MainLoader />
+      </div>
+    );
   if (!userInfo) return <Navigate to="/login" />;
 
   return children;

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import CanvasRenderer from "./CanvasRenderer";
 import type { TiledMap } from "../types/canvas";
+import { Sprites, type SpriteNames } from "@/types/types";
+
+export type LoadedCharacter = {
+  name: SpriteNames;
+  img: HTMLImageElement;
+};
 
 export default function Canvas() {
   const [mapData, setMapData] = useState<TiledMap | null>(null);
@@ -8,7 +14,8 @@ export default function Canvas() {
   const [tilesetImages, setTilesetImages] = useState<
     Record<string, HTMLImageElement>
   >({});
-  const [characters, setCharacters] = useState<HTMLImageElement[] | null>();
+  const [characters, setCharacters] =
+    useState<Record<SpriteNames, LoadedCharacter>>();
 
   //This loads map data
   // useEffect(() => {
@@ -59,16 +66,21 @@ export default function Canvas() {
   // this loads character sprites
   useEffect(() => {
     const loadCharacters = async () => {
-      let LoadedCharacters = [];
-      const chars = ["Adam", "Ash", "Lucy", "Nancy"];
-      for (let c of chars) {
-        let playerImgPath = `/assets/character/single/${c}_idle_anim_12.png`;
-        const loadedImage = await getImage(playerImgPath);
-        if (loadedImage) {
-          LoadedCharacters.push(loadedImage);
-        }
+      const loadedChars: Partial<Record<SpriteNames, LoadedCharacter>> = {};
+
+      for (const c of Sprites) {
+        const img = await getImage(
+          `/assets/character/single/${c}_idle_anim_12.png`
+        );
+        if (!img) continue;
+
+        loadedChars[c] = {
+          name: c,
+          img,
+        };
       }
-      setCharacters(LoadedCharacters);
+
+      setCharacters(loadedChars as Record<SpriteNames, LoadedCharacter>);
     };
     loadCharacters();
   }, []);
