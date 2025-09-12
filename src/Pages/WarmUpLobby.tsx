@@ -200,60 +200,67 @@ const WarmUpLobby = () => {
   };
 
   const handleEnterRoom = () => {
-    if (canEnterRoom) {
-      const fromJoinOrCreate = location.state.from;
+    if (!canEnterRoom || !socket) return;
 
-      if (fromJoinOrCreate === "join") {
+    const fromJoinOrCreate = location.state?.from;
+    const roomId = location.state?.roomId;
+    const roomName = location.state?.roomName;
 
+    let payload: { roomId?: string; roomName?: string; sprite: SpriteNames } = {
+      sprite: SelectedCharacter,
+    };
 
-      } else {
-        const roomName = location.state.roomName;
-        console.log(location,SelectedCharacter)
-        if (socket && roomName) {
-          socket.emit(
-            "join-room",
-            {
-              roomName: roomName.trim() ?? undefined,
+    if (fromJoinOrCreate === "join" && roomId) {
+      payload.roomId = roomId.trim();
+    } else if (fromJoinOrCreate === "create" && roomName) {
+      payload.roomName = roomName.trim();
+    } else {
+      setError("Invalid room information.");
+      return;
+    }
+
+    setIsJoining(true);
+
+    socket.emit(
+      "join-room",
+      payload,
+      (res: { success: boolean; data: JoinRoomResponse }) => {
+        try {
+          if (!res || !res.success || !res.data) {
+            setError("Failed to join room. Please try again.");
+            return;
+          }
+
+          if (!socket.id) {
+            setError("Socket connection lost. Please refresh and try again.");
+            return;
+          }
+
+          const { userId, userName, availability, sprite } = res.data.user;
+          const { roomId } = res.data.room;
+
+          dispatch(
+            setCurrentUser({
+              id: userId,
+              username: userName,
+              x: 22,
+              y: 10,
+              socketId: socket.id,
+              roomId: roomId,
+              isAudioEnabled: false,
+              isVideoEnabled: false,
               sprite: SelectedCharacter,
-            },
-            async (res: { success: boolean; data: JoinRoomResponse }) => {
-              try {
-                setIsJoining(true);
-                if (!res || !res.success || !res.data) {
-                  setError("Failed to create space. Please try again.");
-                  console.log("Error in joining room");
-                } else {
-                  if (!socket.id) return;
-                  const { userId, userName, availability, sprite } =
-                    res.data.user;
-                  const { roomId } = res.data.room;
-                  dispatch(
-                    setCurrentUser({
-                      id: userId,
-                      username: userName,
-                      x: 22,
-                      y: 10,
-                      socketId: socket.id,
-                      roomId: roomId,
-                      isAudioEnabled: false,
-                      isVideoEnabled: false,
-                      sprite: SelectedCharacter,
-                      availability: availability,
-                    })
-                  );
-                  nav(`/r/${roomId}`);
-                }
-              } catch (error) {
-                setError("An unexpected error occurred. Please try again.");
-                console.log("error joining", error);
-              } finally {
-                setTimeout(() => setIsJoining(false), 1000);
-              }
-            }
+              availability: availability,
+            })
           );
+          nav(`/r/${roomId}`);
+        } catch (error) {
+          setError("An unexpected error occurred. Please try again.");
+        } finally {
+          setIsJoining(false);
         }
       }
-    }
+    );
   };
 
   useEffect(() => {
