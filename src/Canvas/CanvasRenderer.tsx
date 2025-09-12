@@ -61,6 +61,9 @@ export default function CanvasRenderer({
 
   const nearbyUserIds = new Set(nearbyParticipants);
 
+  useEffect(() => {
+    console.log(currentUser);
+  }, [currentUser]);
   // Handle window resize
   useEffect(() => {
     function handleResize() {

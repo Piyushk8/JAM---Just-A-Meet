@@ -23,11 +23,20 @@ import { motion } from "motion/react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/Redux";
 import { setCurrentUser, updateCurrentUser } from "@/Redux/roomState";
-import { Sprites, type SpriteNames } from "@/types/types";
-import { useNavigate } from "react-router-dom";
+import {
+  Sprites,
+  type JoinRoomResponse,
+  type SpriteNames,
+} from "@/types/types";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useSocket } from "@/SocketProvider";
 
 const WarmUpLobby = () => {
+  const location = useLocation();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const socket = useSocket();
+  const [IsJoining, setIsJoining] = useState(false);
+
   const [videoOn, setVideoOn] = useState(false);
   const [audioOn, setAudioOn] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,16 +55,18 @@ const WarmUpLobby = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state: RootState) => state.roomState);
 
+  const [SelectedCharacter, setSelectedCharacter] =
+    useState<SpriteNames>("Adam");
   const [canEnterRoom, setCanEnterRoom] = useState(
-    hasVideoPermission && hasAudioPermission && currentUser?.sprite
+    hasVideoPermission && hasAudioPermission && SelectedCharacter
   );
   // Check if both permissions are granted
 
   useEffect(() => {
     setCanEnterRoom(
-      hasVideoPermission && hasAudioPermission && currentUser?.sprite
+      hasVideoPermission && hasAudioPermission && SelectedCharacter
     );
-  }, [hasVideoPermission, hasAudioPermission, currentUser?.sprite]);
+  }, [hasVideoPermission, hasAudioPermission, SelectedCharacter]);
 
   useEffect(() => {
     const getDevices = async () => {
@@ -189,8 +200,59 @@ const WarmUpLobby = () => {
   };
 
   const handleEnterRoom = () => {
-    if (canEnterRoom && currentUser && currentUser.roomId) {
-      nav(`/r/${currentUser?.roomId}`);
+    if (canEnterRoom) {
+      const fromJoinOrCreate = location.state.from;
+
+      if (fromJoinOrCreate === "join") {
+
+
+      } else {
+        const roomName = location.state.roomName;
+        console.log(location,SelectedCharacter)
+        if (socket && roomName) {
+          socket.emit(
+            "join-room",
+            {
+              roomName: roomName.trim() ?? undefined,
+              sprite: SelectedCharacter,
+            },
+            async (res: { success: boolean; data: JoinRoomResponse }) => {
+              try {
+                setIsJoining(true);
+                if (!res || !res.success || !res.data) {
+                  setError("Failed to create space. Please try again.");
+                  console.log("Error in joining room");
+                } else {
+                  if (!socket.id) return;
+                  const { userId, userName, availability, sprite } =
+                    res.data.user;
+                  const { roomId } = res.data.room;
+                  dispatch(
+                    setCurrentUser({
+                      id: userId,
+                      username: userName,
+                      x: 22,
+                      y: 10,
+                      socketId: socket.id,
+                      roomId: roomId,
+                      isAudioEnabled: false,
+                      isVideoEnabled: false,
+                      sprite: SelectedCharacter,
+                      availability: availability,
+                    })
+                  );
+                  nav(`/r/${roomId}`);
+                }
+              } catch (error) {
+                setError("An unexpected error occurred. Please try again.");
+                console.log("error joining", error);
+              } finally {
+                setTimeout(() => setIsJoining(false), 1000);
+              }
+            }
+          );
+        }
+      }
     }
   };
 
@@ -331,10 +393,10 @@ const WarmUpLobby = () => {
                   transition: { duration: 0.15, ease: "easeOut" },
                 }}
                 animate={{
-                  scale: currentUser?.sprite === a ? 1.5 : 1,
+                  scale: SelectedCharacter === a ? 1.5 : 1,
                   transition: { duration: 0.15, ease: "easeOut" },
                 }}
-                onClick={() => dispatch(updateCurrentUser({ sprite: a }))}
+                onClick={() => setSelectedCharacter(a)}
               >
                 <img src={`/assets/character/single/${a}_idle_anim_22.png`} />
               </motion.div>

@@ -37,7 +37,8 @@ export function JoinRoomDialog() {
     if (!userInfo && !loading) {
       nav("/login");
     }
-  }, [userInfo?.id,loading]);
+  }, [userInfo?.id, loading]);
+  
   const handleJoinRoom = async (
     prevState: FormState,
     formData: FormData
@@ -66,6 +67,7 @@ export function JoinRoomDialog() {
         "join-room",
         {
           roomId: roomId.trim(),
+          sprite: "Adam",
         },
         async (res: { success: boolean; data: JoinRoomResponse }) => {
           try {
@@ -102,7 +104,7 @@ export function JoinRoomDialog() {
                 roomId: joinedRoomId,
                 isAudioEnabled: false,
                 isVideoEnabled: false,
-                sprite: "Adam",
+                sprite: sprite,
                 availability: availability,
               })
             );

@@ -22,6 +22,7 @@ export type RoomThemes = "office 1" | "larger office";
 
 export const JoinRoom = () => {
   const socket = useSocket();
+  const Navigate = useNavigate();
   const [IsJoining, setIsJoining] = useState<boolean>(false);
   const [roomName, setRoomName] = useState<string>("");
   const [roomTheme, setRoomTheme] = useState<null | RoomThemes>(null);
@@ -53,48 +54,7 @@ export const JoinRoom = () => {
       return;
     }
 
-    if (socket) {
-      socket.emit(
-        "join-room",
-        {
-          roomName: roomName.trim() ?? undefined,
-        },
-        async (res: { success: boolean; data: JoinRoomResponse }) => {
-          try {
-            setIsJoining(true);
-            if (!res || !res.success || !res.data) {
-              setError("Failed to create space. Please try again.");
-              console.log("Error in joining room");
-            } else {
-              if (!socket.id) return;
-              const { userId, userName, availability, sprite } = res.data.user;
-              const { roomId } = res.data.room;
-              dispatch(
-                setCurrentUser({
-                  id: userId,
-                  username: userName,
-                  x: 22,
-                  y: 10,
-                  socketId: socket.id,
-                  roomId: roomId,
-                  isAudioEnabled: false,
-                  isVideoEnabled: false,
-                  sprite: "Adam",
-                  availability: availability,
-                })
-              );
-              setSuccess("Space created successfully!");
-              nav("/lobby");
-            }
-          } catch (error) {
-            setError("An unexpected error occurred. Please try again.");
-            console.log("error joining", error);
-          } finally {
-            setTimeout(() => setIsJoining(false), 1000);
-          }
-        }
-      );
-    }
+    Navigate("/lobby", { state: { roomName , from:"create"} });
   };
 
   return (

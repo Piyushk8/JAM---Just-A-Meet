@@ -46,6 +46,7 @@ export default function PhaserRoom() {
   const socket = useSocket();
   const dispatch = useDispatch();
   const params = useParams();
+  const { roomId } = params;
   const [isConnecting, setIsConnecting] = useState(false);
   const { currentUser } = useSelector((state: RootState) => state.roomState);
   const { isUserControlsOpen, OnGoingConversations } = useSelector(
@@ -157,40 +158,44 @@ export default function PhaserRoom() {
     };
   }, [socket, dispatch, liveKitManager]);
 
+  if (!roomId) {
+    return <>no room found</>;
+  }
   // join room effect
   useEffect(() => {
     if (!socket) return;
-    const { roomId } = params;
 
-    socket.emit(
-      "join-room",
-      {
-        roomId,
-      },
-      (res: { success: boolean; data: JoinRoomResponse }) => {
-        if (!res || !res.success || !socket.id) {
-          console.error("Failed to join room");
-          return;
+    if (!currentUser) {
+      socket.emit(
+        "reconnect:room",
+        {
+          roomId,
+        },
+        (res: { success: boolean; data: JoinRoomResponse }) => {
+          if (!res || !res.success || !socket.id) {
+            console.error("Failed to join room");
+            return;
+          }
+
+          const { user, room } = res.data;
+
+          dispatch(
+            setCurrentUser({
+              id: user.userId,
+              username: user.userName,
+              x: 22,
+              y: 10,
+              socketId: socket?.id,
+              roomId: room.roomId,
+              isAudioEnabled: false,
+              isVideoEnabled: false,
+              sprite: user.sprite,
+              availability: user.availability,
+            })
+          );
         }
-
-        const { user, room } = res.data;
-
-        dispatch(
-          setCurrentUser({
-            id: user.userId,
-            username: user.userName,
-            x: 22,
-            y: 10,
-            socketId: socket?.id,
-            roomId: room.roomId,
-            isAudioEnabled: false,
-            isVideoEnabled: false,
-            sprite: user.sprite,
-            availability: user.availability,
-          })
-        );
-      }
-    );
+      );
+    }
   }, [socket, params.roomId]);
 
   const handleConnectToLiveKitRoom = async () => {
@@ -198,7 +203,7 @@ export default function PhaserRoom() {
     if (liveKitManager.room?.state == "connected") return;
     try {
       setIsConnecting(true);
-  
+
       const token = await fetchLiveKitToken(currentUser?.id, params.roomId);
 
       await liveKitManager.join({
@@ -211,7 +216,6 @@ export default function PhaserRoom() {
       // Update Redux state to reflect initial state
       dispatch(setIsAudioEnabled(false));
       dispatch(setIsVideoEnabled(false));
-
     } catch (error) {
     } finally {
       setIsConnecting(false);
@@ -221,7 +225,7 @@ export default function PhaserRoom() {
   return (
     <div className="relative z-0">
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
-      <RoomHeader/>
+      <RoomHeader />
       <Canvas />
       <NearbyUsers />
       <RoomMediaBar position="top" showControls />

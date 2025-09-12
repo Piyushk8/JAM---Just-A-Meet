@@ -27,7 +27,7 @@ export interface User {
   renderX?: number;
   renderY?: number;
   socketId: string;
-  roomId?: string;
+  roomId: string;
   isAudioEnabled?: boolean;
   isVideoEnabled?: boolean;
   sprite: SpriteNames;
@@ -95,7 +95,7 @@ export interface JoinRoomResponse {
   user: {
     userName: string;
     userId: string;
-    sprite:SpriteNames;
+    sprite: SpriteNames;
     availability: UserAvailabilityStatus;
   };
   room: {
@@ -105,9 +105,14 @@ export interface JoinRoomResponse {
 
 export type ClientToServer = {
   "join-room": (
-    data: { roomId?: string; roomName?: string },
+    data: { roomId?: string; roomName?: string; sprite: SpriteNames },
     cb: (res: { success: boolean; data: JoinRoomResponse }) => void
   ) => Promise<void>;
+  "reconnect:room": (
+    data: { roomId: string },
+    cb: (res: { success: boolean; data: JoinRoomResponse }) => void
+  ) => Promise<void>;
+
   "user-move": (data: { x: number; y: number }) => void;
   "media-state-changed": (data: {
     isAudioEnabled: boolean;
