@@ -70,6 +70,16 @@ const livekitSlice = createSlice({
         if (!player.id) continue;
 
         const existing = state.usersInRoom[player.id];
+
+        if (
+          existing &&
+          Object.keys(player).every(
+            (key) => (existing as any)[key] === (player as any)[key]
+          )
+        ) {
+          continue;
+        }
+
         state.usersInRoom[player.id] = {
           ...existing,
           ...player,

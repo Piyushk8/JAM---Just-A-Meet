@@ -84,7 +84,6 @@ export default function Canvas() {
     };
     loadCharacters();
   }, []);
-  console.log("characters",characters)
   return (
     <>
       {mapData && Object.keys(tilesetImages).length > 0 && characters && (

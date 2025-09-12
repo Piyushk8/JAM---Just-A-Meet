@@ -60,11 +60,7 @@ export default function CanvasRenderer({
   const { isComputer } = useSelector((state: RootState) => state.miscSlice);
 
   const nearbyUserIds = new Set(nearbyParticipants);
-
-  useEffect(() => {
-    console.log(currentUser);
-  }, [currentUser]);
-  // Handle window resize
+// Handle window resize
   useEffect(() => {
     function handleResize() {
       setViewport({

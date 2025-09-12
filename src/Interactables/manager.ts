@@ -6,7 +6,7 @@ import type {
 } from "./coreDS";
 
 export interface InteractionEvent {
-  type: 'available' | 'lost' | 'triggered';
+  type: "available" | "lost" | "triggered";
   objectId: string;
   object?: InteractableObject;
   position?: { x: number; y: number };
@@ -15,15 +15,18 @@ export interface InteractionEvent {
 export type InteractionEventHandler = (event: InteractionEvent) => void;
 
 // Enhanced state update callback type for Redux integration
-export type StateUpdateCallback = (availableInteractions: InteractableObject[], closestInteraction: InteractableObject | null) => void;
+export type StateUpdateCallback = (
+  availableInteractions: InteractableObject[],
+  closestInteraction: InteractableObject | null
+) => void;
 
 export class InteractionManager {
   private interactablesMap: InteractablesMap;
   private interactionState: InteractionState;
   private eventHandlers: Set<InteractionEventHandler> = new Set();
   private stateUpdateCallback: StateUpdateCallback | null = null;
-  private static readonly INTERACTION_COOLDOWN = 300; 
-  private static readonly UPDATE_DEBOUNCE = 100; 
+  private static readonly INTERACTION_COOLDOWN = 300;
+  private static readonly UPDATE_DEBOUNCE = 100;
   private updateTimeoutId: number | null = null;
   private currentPlayerPosition: { x: number; y: number } | null = null;
 
@@ -33,7 +36,7 @@ export class InteractionManager {
       nearbyObjects: new Set(),
       lastInteracted: null,
       cooldownUntil: 0,
-      lastPosition: null
+      lastPosition: null,
     };
   }
 
@@ -49,7 +52,7 @@ export class InteractionManager {
 
   public updateInteractions(playerPosition: { x: number; y: number }): void {
     this.currentPlayerPosition = playerPosition;
-    
+
     if (this.updateTimeoutId !== null) {
       clearTimeout(this.updateTimeoutId);
     }
@@ -61,13 +64,13 @@ export class InteractionManager {
 
   public getAvailableInteractions(): InteractableObject[] {
     return Array.from(this.interactionState.nearbyObjects)
-      .map(id => this.interactablesMap.objects.get(id))
+      .map((id) => this.interactablesMap.objects.get(id))
       .filter((obj): obj is InteractableObject => obj !== undefined);
   }
 
   public triggerInteraction(objectId: string): boolean {
     const now = Date.now();
-    
+
     if (now < this.interactionState.cooldownUntil) {
       return false;
     }
@@ -81,27 +84,29 @@ export class InteractionManager {
       return false;
     }
 
-    this.interactionState.cooldownUntil = now + InteractionManager.INTERACTION_COOLDOWN;
+    this.interactionState.cooldownUntil =
+      now + InteractionManager.INTERACTION_COOLDOWN;
     this.interactionState.lastInteracted = objectId;
 
     this.emitEvent({
-      type: 'triggered',
+      type: "triggered",
       objectId,
-      object
+      object,
     });
-
-    console.log("Interaction triggered:", objectId);
     return true;
   }
 
-  public getClosestInteraction(playerPosition: { x: number; y: number }): InteractableObject | null {
+  public getClosestInteraction(playerPosition: {
+    x: number;
+    y: number;
+  }): InteractableObject | null {
     const available = this.getAvailableInteractions();
     if (available.length === 0) return null;
 
     let closest: InteractableObject | null = null;
     let closestDistance = Infinity;
 
-    available.forEach(obj => {
+    available.forEach((obj) => {
       const distance = this.getDistanceToObject(playerPosition, obj);
       if (distance < closestDistance) {
         closestDistance = distance;
@@ -112,7 +117,10 @@ export class InteractionManager {
     return closest;
   }
 
-  private performInteractionUpdate(playerPosition: { x: number; y: number }): void {
+  private performInteractionUpdate(playerPosition: {
+    x: number;
+    y: number;
+  }): void {
     if (
       this.interactionState.lastPosition &&
       this.interactionState.lastPosition.x === playerPosition.x &&
@@ -130,9 +138,9 @@ export class InteractionManager {
     const nearbyObjects = this.getNearbyObjects(playerPosition);
 
     // Check each nearby object for interaction range
-    nearbyObjects.forEach(obj => {
+    nearbyObjects.forEach((obj) => {
       const distance = this.getDistanceToObject(playerPosition, obj);
-      
+
       if (distance <= obj.interactionRange) {
         currentNearby.add(obj.id);
       }
@@ -147,29 +155,24 @@ export class InteractionManager {
     // console.log("Current nearby:", Array.from(currentNearby));
 
     // Fire events for new interactions (available)
-    currentNearby.forEach(objectId => {
+    currentNearby.forEach((objectId) => {
       if (!previousNearby.has(objectId)) {
         const object = this.interactablesMap.objects.get(objectId);
         if (object) {
           // console.log("🆕 New interaction available:", objectId);
           this.emitEvent({
-            type: 'available',
+            type: "available",
             objectId,
             object,
-            position: playerPosition
+            position: playerPosition,
           });
         }
       }
     });
 
     // Fire events for lost interactions
-    previousNearby.forEach(objectId => {
+    previousNearby.forEach((objectId) => {
       if (!currentNearby.has(objectId)) {
-        console.log("❌ Interaction lost emittef :", objectId);
-        this.emitEvent({
-          type: 'lost',
-          objectId
-        });
       }
     });
 
@@ -180,19 +183,22 @@ export class InteractionManager {
   //@ts-ignore // future use
   private updateReduxState(playerPosition: { x: number; y: number }): void {
     if (this.stateUpdateCallback) {
-      console.log(this.getAvailableInteractions,this.getClosestInteraction)
+      console.log(this.getAvailableInteractions, this.getClosestInteraction);
       const availableInteractions = this.getAvailableInteractions();
       const closestInteraction = this.getClosestInteraction(playerPosition);
       this.stateUpdateCallback(availableInteractions, closestInteraction);
     }
   }
 
-  private getNearbyObjects(playerPosition: { x: number; y: number }): InteractableObject[] {
+  private getNearbyObjects(playerPosition: {
+    x: number;
+    y: number;
+  }): InteractableObject[] {
     const nearbyObjects = new Set<string>();
-    
+
     const { chunkX, chunkY } = tileToChunk(
-      playerPosition.x, 
-      playerPosition.y, 
+      playerPosition.x,
+      playerPosition.y,
       this.interactablesMap.chunkSize
     );
 
@@ -200,27 +206,30 @@ export class InteractionManager {
       for (let dx = -1; dx <= 1; dx++) {
         const checkChunkKey = getChunkKey(chunkX + dx, chunkY + dy);
         const chunk = this.interactablesMap.spatialGrid.get(checkChunkKey);
-        
+
         if (chunk) {
-          chunk.objects.forEach(objectId => nearbyObjects.add(objectId));
+          chunk.objects.forEach((objectId) => nearbyObjects.add(objectId));
         }
       }
     }
 
     return Array.from(nearbyObjects)
-      .map(id => this.interactablesMap.objects.get(id))
+      .map((id) => this.interactablesMap.objects.get(id))
       .filter((obj): obj is InteractableObject => obj !== undefined);
   }
 
   private getDistanceToObject(
-    playerPosition: { x: number; y: number }, 
+    playerPosition: { x: number; y: number },
     object: InteractableObject
   ): number {
     let minDistance = Infinity;
 
-    object.tiles.forEach(tileKey => {
-      const [tileX, tileY] = tileKey.split(',').map(Number);
-      const distance = manhattanDistance(playerPosition, { x: tileX, y: tileY });
+    object.tiles.forEach((tileKey) => {
+      const [tileX, tileY] = tileKey.split(",").map(Number);
+      const distance = manhattanDistance(playerPosition, {
+        x: tileX,
+        y: tileY,
+      });
       minDistance = Math.min(minDistance, distance);
     });
 
@@ -228,7 +237,7 @@ export class InteractionManager {
   }
 
   private emitEvent(event: InteractionEvent): void {
-    this.eventHandlers.forEach(handler => {
+    this.eventHandlers.forEach((handler) => {
       try {
         handler(event);
       } catch (error) {
