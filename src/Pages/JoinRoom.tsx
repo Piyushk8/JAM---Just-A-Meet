@@ -18,7 +18,7 @@ interface User {
   isVideoEnabled?: boolean;
 }
 
-export type RoomThemes = "office 1" | "larger office";
+export type RoomThemes = "office 1" | "larger office 1" | "larger office 2";
 
 export const JoinRoom = () => {
   const socket = useSocket();

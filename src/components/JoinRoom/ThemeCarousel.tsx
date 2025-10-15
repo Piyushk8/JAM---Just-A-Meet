@@ -29,15 +29,21 @@ const themes: themeState[] = [
     description: "Spacious sky office with soothing ambiance.",
   },
   {
-    id: 4,
-    name: "larger office",
-    image: "/assets/map/Office 1.webp",
-    locked: true,
+    id: 2,
+    name: "larger office 1",
+    image: "/assets/map/LargerOffice 1.webp",
+    locked: false,
     description: "Expand your workspace—perfect for larger groups.",
+  },
+  {
+    id: 4,
+    name: "larger office 2",
+    image: "/assets/map/LargerOffice 1.webp",
+    locked: true,
+    description: "Premium large multi event arena for Events and conferences",
   },
 ];
 
-//upcoming teasers
 
 export function ThemeCarousel() {
   const dispatch = useDispatch();

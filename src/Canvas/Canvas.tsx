@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import CanvasRenderer from "./CanvasRenderer";
 import type { TiledMap } from "../types/canvas";
 import { Sprites, type SpriteNames } from "@/types/types";
+import type { RoomThemes } from "@/Pages/JoinRoom";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/Redux";
 
 export type LoadedCharacter = {
   name: SpriteNames;
@@ -14,15 +17,20 @@ export default function Canvas() {
   const [tilesetImages, setTilesetImages] = useState<
     Record<string, HTMLImageElement>
   >({});
+  const { roomTheme } = useSelector((state: RootState) => state.roomState);
   const [characters, setCharacters] =
     useState<Record<SpriteNames, LoadedCharacter>>();
-
+  const mapNames: Record<RoomThemes, string> = {
+    "larger office 1": "LargerOffice1.json",
+    "office 1": "map",
+    "larger office 2": "",
+  };
   useEffect(() => {
-    fetch("/assets/map/LargerOffice1.json") // relative to same origin
+    if (!roomTheme) return;
+    fetch(`/assets/map/${mapNames[roomTheme!]}`)
       .then((res) => res.json())
       .then(setMapData);
   }, []);
-  console.log(mapData)
 
   // this loads tiledsets
   useEffect(() => {
