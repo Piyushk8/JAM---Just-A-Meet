@@ -17,20 +17,12 @@ export default function Canvas() {
   const [characters, setCharacters] =
     useState<Record<SpriteNames, LoadedCharacter>>();
 
-  //This loads map data
-  // useEffect(() => {
-  //   fetch(`${"http://localhost:5173"}/assets/map/map.json`)
-  //     .then((res) =>{
-  //       return res.json()})
-  //     .then(setMapData);
-
-  // }, []);
-
   useEffect(() => {
-    fetch("/assets/map/map.json") // relative to same origin
+    fetch("/assets/map/LargerOffice1.json") // relative to same origin
       .then((res) => res.json())
       .then(setMapData);
   }, []);
+  console.log(mapData)
 
   // this loads tiledsets
   useEffect(() => {
