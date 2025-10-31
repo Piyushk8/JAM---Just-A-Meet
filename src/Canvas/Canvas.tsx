@@ -22,12 +22,12 @@ export default function Canvas() {
     useState<Record<SpriteNames, LoadedCharacter>>();
   const mapNames: Record<RoomThemes, string> = {
     "larger office 1": "LargerOffice1.json",
-    "office 1": "map",
+    "office 1": "map.json",
     "larger office 2": "",
   };
   useEffect(() => {
     if (!roomTheme) return;
-    fetch(`/assets/map/${mapNames[roomTheme!]}`)
+    fetch(`/assets/map/${mapNames[roomTheme]}`)
       .then((res) => res.json())
       .then(setMapData);
   }, []);
