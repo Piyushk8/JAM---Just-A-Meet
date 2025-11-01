@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/carousel";
 import { CheckCircle, LockKeyhole } from "lucide-react";
 import type { RootState } from "@/Redux";
-import type { RoomThemes } from "@/Pages/JoinRoom";
 import { motion } from "motion/react";
+import type { RoomThemes } from "@/types/roomTypes";
 interface themeState {
   id: number;
   name: RoomThemes;

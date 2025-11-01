@@ -7,18 +7,7 @@ import { useSocket } from "../SocketProvider";
 import type { JoinRoomResponse } from "@/types/types";
 import { ThemeCarousel } from "@/components/JoinRoom/ThemeCarousel";
 import { ArrowRight, AlertCircle } from "lucide-react";
-
-interface User {
-  id: string;
-  username: string;
-  x: number;
-  y: number;
-  distance?: number;
-  isAudioEnabled?: boolean;
-  isVideoEnabled?: boolean;
-}
-
-export type RoomThemes = "office 1" | "larger office 1" | "larger office 2";
+import type { RoomThemes } from "@/types/roomTypes";
 
 export const JoinRoom = () => {
   const socket = useSocket();
@@ -54,7 +43,7 @@ export const JoinRoom = () => {
       return;
     }
 
-    Navigate("/lobby", { state: { roomName , from:"create"} });
+    Navigate("/lobby", { state: { roomName, from: "create" } });
   };
 
   return (

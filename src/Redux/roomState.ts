@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { User, UserAvailabilityStatus } from "../types/types";
-import type { RoomThemes } from "@/Pages/JoinRoom";
+import type { RoomThemes } from "@/types/roomTypes";
 
 interface RoomState {
   currentUser: User | null;

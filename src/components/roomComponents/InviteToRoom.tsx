@@ -3,10 +3,11 @@ import { LucideShare2, Zap } from "lucide-react";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "motion/react";
+import { RoomThemesId } from "@/types/roomTypes";
 
 const InviteToRoom = () => {
   const [isHovered, setIsHovered] = useState(false);
-
+  const { roomTheme } = useSelector((state: RootState) => state.roomState);
   const [copied, setCopied] = useState(false);
 
   const { currentUser } = useSelector((state: RootState) => state.roomState);
@@ -14,7 +15,9 @@ const InviteToRoom = () => {
   const handleInvite = async () => {
     try {
       if (currentUser?.roomId) {
-        await navigator.clipboard.writeText(currentUser?.roomId);
+        await navigator.clipboard.writeText(
+          currentUser?.roomId + (roomTheme ? `&${RoomThemesId[roomTheme]}` : "")
+        );
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
@@ -30,7 +33,7 @@ const InviteToRoom = () => {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         whileHover={{
-            scale:1.1
+          scale: 1.1,
         }}
         className={`
         relative group flex justify-center items-center p-3 rounded-xl

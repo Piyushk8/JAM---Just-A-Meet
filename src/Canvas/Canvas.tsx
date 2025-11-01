@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import CanvasRenderer from "./CanvasRenderer";
 import type { TiledMap } from "../types/canvas";
 import { Sprites, type SpriteNames } from "@/types/types";
-import type { RoomThemes } from "@/Pages/JoinRoom";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/Redux";
+import type { RoomThemes } from "@/types/roomTypes";
 
 export type LoadedCharacter = {
   name: SpriteNames;
@@ -84,14 +84,17 @@ export default function Canvas() {
     };
     loadCharacters();
   }, []);
+  console.log(mapData, tilesetImages, characters);
   return (
     <>
-      {mapData && Object.keys(tilesetImages).length > 0 && characters && (
+      {mapData && Object.keys(tilesetImages).length > 0 && characters ? (
         <CanvasRenderer
           characters={characters}
           mapData={mapData}
           tilesetImages={tilesetImages}
         />
+      ) : (
+        <>loading canvas</>
       )}
     </>
   );

@@ -22,7 +22,11 @@ import React, { useRef, useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/Redux";
-import { setCurrentUser, updateCurrentUser } from "@/Redux/roomState";
+import {
+  setCurrentUser,
+  setRoomTheme,
+  updateCurrentUser,
+} from "@/Redux/roomState";
 import {
   Sprites,
   type JoinRoomResponse,
@@ -30,6 +34,7 @@ import {
 } from "@/types/types";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketProvider";
+import { RoomThemesId, RoomThemesName } from "@/types/roomTypes";
 
 const WarmUpLobby = () => {
   const location = useLocation();
@@ -211,7 +216,17 @@ const WarmUpLobby = () => {
     };
 
     if (fromJoinOrCreate === "join" && roomId) {
-      payload.roomId = roomId.trim();
+      const roomIdAndThemeId = roomId.split("&");
+      const roomThemeId = roomIdAndThemeId[1] as RoomThemesId;
+      const RoomId = roomIdAndThemeId[0];
+
+      if (!roomThemeId) {
+        setError("Invalid room information.");
+        return;
+      }
+      dispatch(setRoomTheme(RoomThemesName[roomThemeId]));
+
+      payload.roomId = RoomId.trim();
     } else if (fromJoinOrCreate === "create" && roomName) {
       payload.roomName = roomName.trim();
     } else {
