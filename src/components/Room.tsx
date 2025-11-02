@@ -13,6 +13,7 @@ import {
   setCurrentUser,
   setIsAudioEnabled,
   setIsVideoEnabled,
+  setRoomTheme,
   updateNearbyParticipants,
   updateUsersInRoom,
 } from "../Redux/roomState";
@@ -25,7 +26,7 @@ import UserControlButton from "./roomComponents/userControlButton";
 import NearbyUsers from "./NearbyUserList/NearbyUserList";
 import { fetchLiveKitToken } from "@/LiveKit/helper";
 import { LIVEKIT_URL } from "@/lib/consts";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   addInvitation,
   addUserInConversation,
@@ -38,20 +39,41 @@ import ChatPanel from "./ChatPanel";
 import RoomMediaBar from "./TopMediaBar/RoomMedia";
 import InviteToRoom from "./roomComponents/InviteToRoom";
 import RoomHeader from "./roomComponents/RoomHeader";
+import { RoomThemesId, RoomThemesName } from "@/types/roomTypes";
 
 // const ROOM_WIDTH = 1200;
 // const ROOM_HEIGHT = 800;
 
 export default function PhaserRoom() {
+  const [searchParams] = useSearchParams();
+  const themeFromUrlRaw = searchParams.get("th"); 
+
   const socket = useSocket();
   const dispatch = useDispatch();
   const params = useParams();
   const { roomId } = params;
   const [isConnecting, setIsConnecting] = useState(false);
-  const { currentUser } = useSelector((state: RootState) => state.roomState);
+  const { currentUser, roomTheme } = useSelector(
+    (state: RootState) => state.roomState
+  );
   const { isUserControlsOpen, OnGoingConversations } = useSelector(
     (state: RootState) => state.miscSlice
   );
+
+  const themeFromUrl: RoomThemesId | undefined = (() => {
+    if (!themeFromUrlRaw) return undefined;
+
+    const parsed = Number(themeFromUrlRaw);
+    return Object.values(RoomThemesId).includes(parsed as RoomThemesId)
+      ? (parsed as RoomThemesId)
+      : undefined;
+  })();
+
+  useEffect(() => {
+    if (!roomTheme && themeFromUrl) {
+      dispatch(setRoomTheme(RoomThemesName[themeFromUrl]));
+    }
+  }, [roomTheme, themeFromUrl, dispatch]);
 
   // live kit connection
   useEffect(() => {
@@ -161,42 +183,53 @@ export default function PhaserRoom() {
   if (!roomId) {
     return <>no room found</>;
   }
+
   // join room effect
   useEffect(() => {
     if (!socket) return;
+    const tryReconnect = () => {
+      if (!currentUser && roomId) {
+        socket.emit(
+          "reconnect:room",
+          { roomId },
+          (res: { success: boolean; data: JoinRoomResponse }) => {
+            if (!res || !res.success) {
+              // console.error("Failed to join room");
+              return;
+            }
 
-    if (!currentUser) {
-      socket.emit(
-        "reconnect:room",
-        {
-          roomId,
-        },
-        (res: { success: boolean; data: JoinRoomResponse }) => {
-          if (!res || !res.success || !socket.id) {
-            console.error("Failed to join room");
-            return;
+            const { user, room } = res.data;
+            dispatch(
+              setCurrentUser({
+                id: user.userId,
+                username: user.userName,
+                x: 22,
+                y: 10,
+                socketId: socket.id!,
+                roomId: room.roomId,
+                isAudioEnabled: false,
+                isVideoEnabled: false,
+                sprite: user.sprite,
+                availability: user.availability,
+              })
+            );
           }
+        );
+      }
+    };
 
-          const { user, room } = res.data;
+    // Attach listener for future connects
+    socket.on("connect", tryReconnect);
 
-          dispatch(
-            setCurrentUser({
-              id: user.userId,
-              username: user.userName,
-              x: 22,
-              y: 10,
-              socketId: socket?.id,
-              roomId: room.roomId,
-              isAudioEnabled: false,
-              isVideoEnabled: false,
-              sprite: user.sprite,
-              availability: user.availability,
-            })
-          );
-        }
-      );
+    // Handle case where socket is already connected
+    if (socket.connected) {
+      tryReconnect();
     }
-  }, [socket, params.roomId]);
+
+    return () => {
+      socket.off("connect", tryReconnect);
+    };
+  }, [socket, currentUser, roomId]);
 
   const handleConnectToLiveKitRoom = async () => {
     if (!currentUser?.id || !params.roomId || isConnecting) return;
@@ -225,6 +258,7 @@ export default function PhaserRoom() {
   return (
     <div className="relative z-0">
       {/* Map Canvas (Handles Players, Map, Proximity, etc.) */}
+
       <RoomHeader />
       <Canvas />
       <NearbyUsers />

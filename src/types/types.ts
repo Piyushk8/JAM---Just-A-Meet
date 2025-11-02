@@ -1,4 +1,5 @@
 import type { ChatMessage, TypingUser } from "./chatTypes";
+import type { RoomThemesId } from "./roomTypes";
 
 export interface userData {
   id: string;
@@ -100,6 +101,7 @@ export interface JoinRoomResponse {
   };
   room: {
     roomId: string;
+    roomThemeId:RoomThemesId
   };
 }
 

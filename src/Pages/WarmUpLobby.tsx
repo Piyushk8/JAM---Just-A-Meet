@@ -65,6 +65,7 @@ const WarmUpLobby = () => {
   const [canEnterRoom, setCanEnterRoom] = useState(
     hasVideoPermission && hasAudioPermission && SelectedCharacter
   );
+  const { roomTheme } = useSelector((state: RootState) => state.roomState);
   // Check if both permissions are granted
 
   useEffect(() => {
@@ -268,7 +269,8 @@ const WarmUpLobby = () => {
               availability: availability,
             })
           );
-          nav(`/r/${roomId}`);
+          const roomThemeId = RoomThemesId[roomTheme!];
+          nav(`/r/${roomId}?th=${roomThemeId}`);
         } catch (error) {
           setError("An unexpected error occurred. Please try again.");
         } finally {
