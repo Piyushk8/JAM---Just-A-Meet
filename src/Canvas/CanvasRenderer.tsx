@@ -16,7 +16,6 @@ import { useInteractionHandler } from "./InteractionHandlers";
 import Joystick from "@/components/JoyStick";
 import MainLoader from "@/components/MainLoader";
 import type { LoadedCharacter } from "./Canvas";
-import { Navigate } from "react-router-dom";
 
 const CAMERA_SMOOTH_FACTOR = 0.1;
 const CAMERA_DEAD_ZONE = 2;
@@ -42,6 +41,7 @@ export default function CanvasRenderer({
     y: number;
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
   const [camera, setCamera] = useState({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({
     width: window.innerWidth,
@@ -57,10 +57,10 @@ export default function CanvasRenderer({
   const { closestInteraction } = useSelector(
     (state: RootState) => state.interactionState
   );
-  const { isComputer } = useSelector((state: RootState) => state.miscSlice);
 
   const nearbyUserIds = new Set(nearbyParticipants);
-// Handle window resize
+
+  // Handle window resize
   useEffect(() => {
     function handleResize() {
       setViewport({
@@ -72,15 +72,35 @@ export default function CanvasRenderer({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Mobile detection
+  // Mobile/Desktop detection
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768 || "ontouchstart" in window);
+    const checkDeviceType = () => {
+      const mobile = window.innerWidth <= 768 || "ontouchstart" in window;
+      setIsMobile(mobile);
+      setIsDesktop(!mobile);
+      // console.log("🖥️ Device detection:", { mobile, desktop: !mobile });
     };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    checkDeviceType();
+    window.addEventListener("resize", checkDeviceType);
+    return () => window.removeEventListener("resize", checkDeviceType);
   }, []);
+
+  // Debug: Log interaction state
+  // useEffect(() => {
+  //   if (closestInteraction) {
+  //     console.log("🔍 Interaction State:", {
+  //       isDesktop,
+  //       type: closestInteraction.type,
+  //       visible: isInteractionVisible(closestInteraction),
+  //       position: getInteractionLabelPosition(closestInteraction),
+  //       camera,
+  //       screenPos: {
+  //         x: getInteractionLabelPosition(closestInteraction).x - camera.x,
+  //         y: getInteractionLabelPosition(closestInteraction).y - camera.y,
+  //       }
+  //     });
+  //   }
+  // }, [closestInteraction, isDesktop, camera]);
 
   const handleJoystickMove = useCallback(
     (movement: { x: number; y: number }) => {
@@ -348,7 +368,6 @@ export default function CanvasRenderer({
         const videoColor = player.isVideoEnabled ? "#10b981" : "#ef4444";
         const videoBg = player.isVideoEnabled ? "#dcfce7" : "#fee2e2";
 
-        //if roundRect is available (newer browsers)
         if (ctx.roundRect) {
           ctx.fillStyle = videoBg;
           ctx.beginPath();
@@ -372,7 +391,6 @@ export default function CanvasRenderer({
           );
           ctx.fill();
         } else {
-          // Fallback for older browsers
           ctx.fillStyle = videoBg;
           ctx.fillRect(
             screenX + TILE_SIZE / 2 + 2 - 2,
@@ -449,7 +467,6 @@ export default function CanvasRenderer({
             break;
         }
 
-        // Save context state
         ctx.save();
 
         ctx.shadowBlur = 6;
@@ -532,7 +549,6 @@ export default function CanvasRenderer({
     if (backgroundCanvasRef.current) {
       const bgCanvas = backgroundCanvasRef.current;
 
-      // Calculate safe source rectangle
       const sourceX = Math.max(0, Math.floor(camera.x));
       const sourceY = Math.max(0, Math.floor(camera.y));
       const sourceWidth = Math.min(viewport.width, bgCanvas.width - sourceX);
@@ -594,13 +610,11 @@ export default function CanvasRenderer({
 
     const canvas = canvasRef.current;
 
-    // Set canvas size
     if (canvas.width !== viewport.width || canvas.height !== viewport.height) {
       canvas.width = viewport.width;
       canvas.height = viewport.height;
     }
 
-    // Render background and start render loop
     renderBackground();
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -622,49 +636,60 @@ export default function CanvasRenderer({
     viewport.width,
     viewport.height,
   ]);
+
   if (userLoading || !currentUser) {
     return <MainLoader />;
   }
 
-  // Auth check is done
-
   return (
     <div className="fixed inset-0 bg-sky-300 overflow-hidden">
-      {/* Interaction label for computer users */}
-      {isComputer &&
+      {/* Debug panel */}
+      {/* {closestInteraction && (
+        <div style={{
+          position: "fixed",
+          top: 10,
+          left: 10,
+          background: "#000",
+          color: "#0f0",
+          padding: "8px",
+          fontSize: "12px",
+          zIndex: 10000,
+          fontFamily: "monospace",
+          borderRadius: "4px",
+        }}>
+          <div>isDesktop: {String(isDesktop)}</div>
+          <div>isMobile: {String(isMobile)}</div>
+          <div>type: {closestInteraction.type}</div>
+          <div>visible: {String(isInteractionVisible(closestInteraction))}</div>
+          <div>labelPos: {JSON.stringify(getInteractionLabelPosition(closestInteraction))}</div>
+          <div>camera: x:{camera.x.toFixed(0)}, y:{camera.y.toFixed(0)}</div>
+          <div>screenX: {(getInteractionLabelPosition(closestInteraction).x - camera.x).toFixed(0)}</div>
+          <div>screenY: {(getInteractionLabelPosition(closestInteraction).y - camera.y).toFixed(0)}</div>
+        </div>
+      )} */}
+
+      {/* Interaction Label */}
+      {isDesktop &&
         closestInteraction &&
         isInteractionVisible(closestInteraction) && (
           <div
             style={{
-              position: "absolute",
-              left: (() => {
-                try {
-                  return (
-                    getInteractionLabelPosition(closestInteraction).x - camera.x
-                  );
-                } catch {
-                  return -9999; // Hide if error
-                }
-              })(),
-              top: (() => {
-                try {
-                  return (
-                    getInteractionLabelPosition(closestInteraction).y - camera.y
-                  );
-                } catch {
-                  return -9999; // Hide if error
-                }
-              })(),
+              position: "fixed",
+              left: getInteractionLabelPosition(closestInteraction).x - camera.x,
+              top: getInteractionLabelPosition(closestInteraction).y - camera.y,
               transform: "translate(-50%, -100%)",
-              background: "rgba(0,0,0,0.7)",
+              background: "rgba(0,0,0,0.85)",
               color: "#fff",
-              padding: "2px 6px",
-              borderRadius: "4px",
-              fontSize: "12px",
-              zIndex: 15,
+              padding: "6px 12px",
+              borderRadius: "6px",
+              fontSize: "16px",
+              fontWeight: "bold",
+              zIndex: 9999,
               pointerEvents: "none",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.3)",
+              border: "2px solid rgba(255,255,255,0.3)",
             }}
-            className="font-mono"
+            className="font-mono select-none"
           >
             Press E
           </div>
@@ -672,7 +697,7 @@ export default function CanvasRenderer({
 
       {/* Game canvas container */}
       <div className="flex items-center justify-center w-full h-full">
-        <div className="relative">
+        <div className="relative w-full h-full">
           {/* Hidden background canvas */}
           <canvas ref={backgroundCanvasRef} style={{ display: "none" }} />
 
@@ -706,7 +731,7 @@ export default function CanvasRenderer({
 
       {/* Mobile joystick */}
       {isMobile && (
-        <div className="absolute bottom-4 left-4">
+        <div className="absolute bottom-4 left-4 z-50">
           <Joystick onMove={handleJoystickMove} onEnd={handleJoystickEnd} />
         </div>
       )}

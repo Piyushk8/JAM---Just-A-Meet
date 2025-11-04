@@ -4,9 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateCurrentUser } from "../Redux/roomState";
 import { ensureTilePosition, type TilePosition } from "../lib/helper";
 import { useSocket } from "../SocketProvider";
-import type {
-  InteractablesMap,
-} from "../Interactables/coreDS";
+import type { InteractablesMap } from "../Interactables/coreDS";
 import type {
   InteractionEvent,
   InteractionManager as InteractionManagerType,
@@ -224,11 +222,8 @@ const Player = ({
 
         case "lost":
           dispatchInteractables(dispatch, manager.getAvailableInteractions());
-
-          dispatchInteractable(
-            dispatch,
-            manager.getClosestInteraction(playerPosition)
-          );
+          const closest = manager.getClosestInteraction(playerPosition);
+          dispatchInteractable(dispatch, closest ?? null);
           break;
 
         case "triggered":
@@ -245,6 +240,16 @@ const Player = ({
       manager.cleanup();
     };
   }, [interactablesMap]);
+
+  const lastInteractionUpdate = useRef(0);
+
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastInteractionUpdate.current > 100) {
+      interactionManagerRef.current?.updateInteractions(playerPosition);
+      lastInteractionUpdate.current = now;
+    }
+  }, [playerPosition]);
 
   // handles interaction checking on each player position in isolated manager
   useEffect(() => {
@@ -359,17 +364,16 @@ const Player = ({
 
   useEffect(() => {
     if (!collisionMap || !joystickMovement) return;
-  
-  const now = Date.now();
-  if (now - lastMoveTime.current < movementCooldown.current) return;
 
-  const { x, y } = joystickMovement;
-  const distance = Math.sqrt(x * x + y * y);
-  
-  
-  if (distance < movementThreshold.current) {
-    return;
-  }
+    const now = Date.now();
+    if (now - lastMoveTime.current < movementCooldown.current) return;
+
+    const { x, y } = joystickMovement;
+    const distance = Math.sqrt(x * x + y * y);
+
+    if (distance < movementThreshold.current) {
+      return;
+    }
     const currentPos = ensureTilePosition(playerPosition);
     let newPos: TilePosition = { ...currentPos };
     const absX = Math.abs(x);
@@ -405,7 +409,6 @@ const Player = ({
     socket,
   ]);
 
-  
   return null;
 };
 

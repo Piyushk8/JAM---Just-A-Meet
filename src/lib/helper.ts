@@ -50,20 +50,22 @@ export const dispatchInteractables = (
 };
 
 export const TILE_SIZE = 32;
-
 export function getInteractionLabelPosition(
-  interaction: serializedInteractableType
+  interaction: serializedInteractableType | null
 ) {
-  // Either use the center of the bounds:
-  const centerX = interaction.bounds.x + interaction.bounds.width / 2;
-  const centerY = interaction.bounds.y + interaction.bounds.height / 2;
+  if (!interaction?.bounds) return { x: -9999, y: -9999 };
+
+  const { x, y, width, height } = interaction.bounds;
+
+  // bounds are in tile units → convert to pixels
+  const centerX = (x + width / 2) * TILE_SIZE;
+  const centerY = (y + height / 2) * TILE_SIZE;
 
   return {
-    x: centerX * TILE_SIZE,
-    y: (centerY - 1) * TILE_SIZE, // a bit above the object
+    x: centerX,
+    y: centerY - TILE_SIZE, // a bit above the object
   };
 }
-
 
 
 /**

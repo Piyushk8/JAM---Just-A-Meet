@@ -173,6 +173,14 @@ export class InteractionManager {
     // Fire events for lost interactions
     previousNearby.forEach((objectId) => {
       if (!currentNearby.has(objectId)) {
+        const object = this.interactablesMap.objects.get(objectId);
+        if (object) {
+          this.emitEvent({
+            type: "lost",
+            objectId,
+            object,
+          });
+        }
       }
     });
 
@@ -183,7 +191,6 @@ export class InteractionManager {
   //@ts-ignore // future use
   private updateReduxState(playerPosition: { x: number; y: number }): void {
     if (this.stateUpdateCallback) {
-      console.log(this.getAvailableInteractions, this.getClosestInteraction);
       const availableInteractions = this.getAvailableInteractions();
       const closestInteraction = this.getClosestInteraction(playerPosition);
       this.stateUpdateCallback(availableInteractions, closestInteraction);

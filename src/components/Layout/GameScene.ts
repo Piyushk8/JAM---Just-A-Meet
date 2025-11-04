@@ -100,7 +100,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    console.log("created", this.make.tilemap());
+    // console.log("created", this.make.tilemap());
     // --- Tilemap ---
     const map = this.make.tilemap({ key: "tilemap" }); // Changed from "office-map" to "tilemap"
 

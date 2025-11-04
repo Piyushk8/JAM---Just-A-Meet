@@ -113,10 +113,10 @@ export default function CallScreen() {
     //@ts-ignore
     const handleAccepted = ({ conversationId, targetUserId }) => {
       if (OnGoingConversations.conversationId == conversationId) {
-        console.log(
-          "🔍 Before sync - participantsWithTracks size:",
-          participantsWithTracks.size
-        );
+        // console.log(
+        //   "🔍 Before sync - participantsWithTracks size:",
+        //   participantsWithTracks.size
+        // );
 
         liveKitManager.syncSubscriptions([targetUserId], []);
         dispatch(addUserInConversation(targetUserId));
