@@ -34,16 +34,26 @@ export default function Canvas() {
       setMapData(map);
 
       // Load tilesets
+      // Load tilesets
       const loadedImages: Record<string, HTMLImageElement> = {};
       for (const ts of map.tilesets) {
         if (!ts.image) continue;
-        const imagePath = `/assets/tileset/${ts.image.split("/").pop()}`;
-        const img = await getImage(imagePath);
-        if (img) {
-          const filename = ts.image.split("/").pop();
-          if (filename) loadedImages[filename] = img;
+
+        const filename = ts.image.split("/").pop();
+        if (!filename) continue;
+
+        // Try tileset first
+        let img = await getImage(`/assets/tileset/${filename}`);
+
+        // Fallback to items folder if not found
+        if (!img) {
+          img = await getImage(`/assets/items/${filename}`);
         }
+
+        if (img) loadedImages[filename] = img;
       }
+      setTilesetImages(loadedImages);
+
       setTilesetImages(loadedImages);
 
       // Load character sprites
