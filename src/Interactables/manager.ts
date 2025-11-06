@@ -38,6 +38,7 @@ export class InteractionManager {
       cooldownUntil: 0,
       lastPosition: null,
     };
+    console.log("interactons map built", interactablesMap);
   }
 
   // Set Redux state update callback
@@ -159,7 +160,7 @@ export class InteractionManager {
       if (!previousNearby.has(objectId)) {
         const object = this.interactablesMap.objects.get(objectId);
         if (object) {
-          // console.log("🆕 New interaction available:", objectId);
+          console.log("🆕 New interaction available:", objectId);
           this.emitEvent({
             type: "available",
             objectId,

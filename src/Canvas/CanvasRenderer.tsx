@@ -1,4 +1,3 @@
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import type { TiledMap } from "../types/canvas";
 import { findTilesetForGID, getInteractionLabelPosition } from "../lib/helper";
 import Player from "./Player";
@@ -16,6 +15,7 @@ import Joystick from "@/components/JoyStick";
 import MainLoader from "@/components/MainLoader";
 import type { LoadedCharacter } from "./Canvas";
 import { CHUNK_SIZE, chunkKey, renderChunk } from "./chunkConfig";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const CAMERA_SMOOTH_FACTOR = 0.1;
 const CAMERA_DEAD_ZONE = 2;
