@@ -3,7 +3,7 @@ import { LucideShare2, Zap } from "lucide-react";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "motion/react";
-import { RoomThemesId } from "@/types/roomTypes";
+import { RoomThemesConfig } from "../JoinRoom/ThemeCarousel";
 
 const InviteToRoom = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -16,7 +16,8 @@ const InviteToRoom = () => {
     try {
       if (currentUser?.roomId) {
         await navigator.clipboard.writeText(
-          currentUser?.roomId + (roomTheme ? `&${RoomThemesId[roomTheme]}` : "")
+          currentUser?.roomId +
+            (roomTheme ? `&${RoomThemesConfig[roomTheme].db_name}` : "")
         );
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);

@@ -1,5 +1,5 @@
 import type { ChatMessage, TypingUser } from "./chatTypes";
-import type { RoomThemesId } from "./roomTypes";
+import type { RoomTheme } from "./roomTypes";
 
 export interface userData {
   id: string;
@@ -101,13 +101,18 @@ export interface JoinRoomResponse {
   };
   room: {
     roomId: string;
-    roomThemeId:RoomThemesId
+    roomTheme: RoomTheme;
   };
 }
 
 export type ClientToServer = {
   "join-room": (
-    data: { roomId?: string; roomName?: string; sprite: SpriteNames },
+    data: {
+      roomId?: string;
+      roomName?: string;
+      sprite: SpriteNames;
+      roomTheme?: RoomTheme;
+    },
     cb: (res: { success: boolean; data: JoinRoomResponse }) => void
   ) => Promise<void>;
   "reconnect:room": (

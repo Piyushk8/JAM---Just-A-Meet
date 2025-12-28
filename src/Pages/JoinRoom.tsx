@@ -7,18 +7,16 @@ import { useSocket } from "../SocketProvider";
 import type { JoinRoomResponse } from "@/types/types";
 import { ThemeCarousel } from "@/components/JoinRoom/ThemeCarousel";
 import { ArrowRight, AlertCircle } from "lucide-react";
-import type { RoomThemes } from "@/types/roomTypes";
+import type { RoomTheme } from "@/types/roomTypes";
+import { RoomSetupStorage } from "@/lib/sessionStorage";
 
 export const JoinRoom = () => {
   const socket = useSocket();
   const Navigate = useNavigate();
   const [IsJoining, setIsJoining] = useState<boolean>(false);
   const [roomName, setRoomName] = useState<string>("");
-  const [roomTheme, setRoomTheme] = useState<null | RoomThemes>(null);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  const dispatch = useDispatch();
-  const nav = useNavigate();
 
   const clearMessages = () => {
     setError("");
@@ -44,6 +42,12 @@ export const JoinRoom = () => {
     }
 
     Navigate("/lobby", { state: { roomName, from: "create" } });
+
+    console.log(
+      "join",
+      RoomSetupStorage.get().roomName,
+      RoomSetupStorage.get().roomTheme
+    );
   };
 
   return (

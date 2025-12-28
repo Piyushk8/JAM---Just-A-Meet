@@ -34,7 +34,9 @@ import {
 } from "@/types/types";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSocket } from "@/SocketProvider";
-import { RoomThemesId, RoomThemesName } from "@/types/roomTypes";
+import { RoomThemesConfig } from "@/components/JoinRoom/ThemeCarousel";
+import type { RoomTheme } from "@/types/roomTypes";
+import { RoomSetupStorage } from "@/lib/sessionStorage";
 
 const WarmUpLobby = () => {
   const location = useLocation();
@@ -65,7 +67,6 @@ const WarmUpLobby = () => {
   const [canEnterRoom, setCanEnterRoom] = useState(
     hasVideoPermission && hasAudioPermission && SelectedCharacter
   );
-  const { roomTheme } = useSelector((state: RootState) => state.roomState);
   // Check if both permissions are granted
 
   useEffect(() => {
@@ -211,25 +212,28 @@ const WarmUpLobby = () => {
     const fromJoinOrCreate = location.state?.from;
     const roomId = location.state?.roomId;
     const roomName = location.state?.roomName;
-
-    let payload: { roomId?: string; roomName?: string; sprite: SpriteNames } = {
+    const { roomTheme } = RoomSetupStorage.get();
+    console.log("lobby",RoomSetupStorage.get().roomName,RoomSetupStorage.get().roomTheme)
+    let payload: {
+      roomId?: string;
+      roomName?: string;
+      sprite: SpriteNames;
+      roomTheme?: RoomTheme;
+    } = {
       sprite: SelectedCharacter,
     };
 
     if (fromJoinOrCreate === "join" && roomId) {
       const roomIdAndThemeId = roomId.split("&");
-      const roomThemeId = roomIdAndThemeId[1] as RoomThemesId;
       const RoomId = roomIdAndThemeId[0];
-
-      if (!roomThemeId) {
-        setError("Invalid room information.");
-        return;
-      }
-      dispatch(setRoomTheme(RoomThemesName[roomThemeId]));
 
       payload.roomId = RoomId.trim();
     } else if (fromJoinOrCreate === "create" && roomName) {
       payload.roomName = roomName.trim();
+
+      if (!roomTheme) throw new Error("no room theme found for creation");
+
+      payload.roomTheme = roomTheme;
     } else {
       setError("Invalid room information.");
       return;
@@ -253,7 +257,7 @@ const WarmUpLobby = () => {
           }
 
           const { userId, userName, availability, sprite } = res.data.user;
-          const { roomId } = res.data.room;
+          const { roomId, roomTheme } = res.data.room;
 
           dispatch(
             setCurrentUser({
@@ -269,12 +273,15 @@ const WarmUpLobby = () => {
               availability: availability,
             })
           );
-          const roomThemeId = RoomThemesId[roomTheme!];
-          nav(`/r/${roomId}?th=${roomThemeId}`);
+          dispatch(
+            setRoomTheme(RoomThemesConfig[res.data.room.roomTheme].db_name)
+          );
+          nav(`/r/${roomId}`);
         } catch (error) {
           setError("An unexpected error occurred. Please try again.");
         } finally {
           setIsJoining(false);
+          RoomSetupStorage.clear();
         }
       }
     );

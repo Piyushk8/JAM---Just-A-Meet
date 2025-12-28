@@ -4,8 +4,8 @@ import type { TiledMap } from "../types/canvas";
 import { Sprites, type SpriteNames } from "@/types/types";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/Redux";
-import type { RoomThemes } from "@/types/roomTypes";
 import { useSearchParams } from "react-router-dom";
+import type { RoomTheme } from "@/types/roomTypes";
 
 export default function Canvas() {
   const [mapData, setMapData] = useState<TiledMap | null>(null);
@@ -18,10 +18,9 @@ export default function Canvas() {
 
   const { roomTheme } = useSelector((state: RootState) => state.roomState);
 
-  const mapNames: Record<RoomThemes, string> = {
-    "larger office 1": "LargerOffice1.json",
-    "office 1": "map.json",
-    "larger office 2": "",
+  const mapNames: Record<RoomTheme, string> = {
+    basicoffice: "map.json",
+    largeoffice: "LargerOffice1.json",
   };
   useEffect(() => {
     const loadAll = async () => {

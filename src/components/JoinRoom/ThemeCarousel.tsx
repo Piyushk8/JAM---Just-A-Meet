@@ -12,38 +12,32 @@ import {
 import { CheckCircle, LockKeyhole } from "lucide-react";
 import type { RootState } from "@/Redux";
 import { motion } from "motion/react";
-import type { RoomThemes } from "@/types/roomTypes";
-interface themeState {
-  id: number;
-  name: RoomThemes;
+import type { RoomTheme } from "@/types/roomTypes";
+import { RoomSetupStorage } from "@/lib/sessionStorage";
+interface IThemeState {
+  displayName: string;
   image: string;
   locked: boolean;
   description: string;
+  db_name: RoomTheme;
 }
-const themes: themeState[] = [
-  {
-    id: 1,
-    name: "office 1",
+export const RoomThemesConfig: Record<RoomTheme, IThemeState> = {
+  basicoffice: {
+    displayName: "Compact Office",
     image: "/assets/map/Office 1.webp",
-    locked: false,
     description: "Spacious sky office with soothing ambiance.",
-  },
-  {
-    id: 2,
-    name: "larger office 1",
-    image: "/assets/map/LargerOffice 1.webp",
     locked: false,
-    description: "Expand your workspace—perfect for larger groups.",
+    db_name: "basicoffice",
   },
-  {
-    id: 4,
-    name: "larger office 2",
-    image: "/assets/map/LargerOffice 1.webp",
-    locked: true,
-    description: "Premium large multi event arena for Events and conferences",
-  },
-];
 
+  largeoffice: {
+    displayName: "Executive Office & Lobby",
+    image: "/assets/map/LargerOffice 1.webp",
+    description: "Perfect for larger teams and events.",
+    locked: false,
+    db_name: "largeoffice",
+  },
+};
 
 export function ThemeCarousel() {
   const dispatch = useDispatch();
@@ -51,20 +45,28 @@ export function ThemeCarousel() {
     (state: RootState) => state.roomState.roomTheme
   );
 
-  const handleSelectTheme = (theme: themeState) => {
+  const handleSelectTheme = (theme: IThemeState) => {
     if (!theme.locked) {
-      dispatch(setRoomTheme(theme.name));
+      // persisted theme name for later use
+      RoomSetupStorage.set({ mode: "create", roomTheme:theme.db_name });
+
+      console.log(
+        "theme",
+        RoomSetupStorage.get().roomName,
+        RoomSetupStorage.get().roomTheme
+      );
+      dispatch(setRoomTheme(theme.db_name));
     }
   };
 
   return (
     <Carousel className="w-full">
       <CarouselContent className="w-full">
-        {themes.map((theme) => {
-          const isSelected = selectedTheme === theme.name;
+        {Object.values(RoomThemesConfig).map((theme) => {
+          const isSelected = selectedTheme === theme.db_name;
 
           return (
-            <CarouselItem key={theme.id} className="w-1/2">
+            <CarouselItem key={theme.description} className="w-1/2">
               {" "}
               {/* Each item takes half the screen width */}
               <div className="p-2">
@@ -89,7 +91,7 @@ export function ThemeCarousel() {
                       {/* Full width with square ratio */}
                       <img
                         src={theme.image}
-                        alt={theme.name}
+                        alt={theme.displayName}
                         className="w-full h-full object-cover rounded-md"
                       />
                       {isSelected && (
@@ -97,7 +99,7 @@ export function ThemeCarousel() {
                       )}
                     </div>
                     <h3 className="mt-4 font-mono text-center text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {theme.name}
+                      {theme.displayName}
                     </h3>
 
                     <div className="max-w-sm p-4 bg-gray-200/50 backdrop-blur-3xl rounded-lg border border-gray-300 shadow-sm">

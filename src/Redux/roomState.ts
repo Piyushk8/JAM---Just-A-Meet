@@ -1,7 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { User, UserAvailabilityStatus } from "../types/types";
-import type { RoomThemes } from "@/types/roomTypes";
+import type { RoomTheme } from "@/types/roomTypes";
 
 interface RoomState {
   currentUser: User | null;
@@ -10,7 +10,7 @@ interface RoomState {
   isVideoEnabled: boolean;
   roomId: string | null;
   usersInRoom: Record<string, User>;
-  roomTheme: RoomThemes | null;
+  roomTheme: RoomTheme | null;
 }
 
 const initialState: RoomState = {
@@ -112,7 +112,7 @@ const livekitSlice = createSlice({
       }
     },
 
-    setRoomTheme: (state, action: PayloadAction<RoomThemes>) => {
+    setRoomTheme: (state, action: PayloadAction<RoomTheme>) => {
       state.roomTheme = action.payload;
     },
     clearRoomTheme: (state, _action) => {

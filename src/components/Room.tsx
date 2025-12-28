@@ -39,7 +39,6 @@ import ChatPanel from "./ChatPanel";
 import RoomMediaBar from "./TopMediaBar/RoomMedia";
 import InviteToRoom from "./roomComponents/InviteToRoom";
 import RoomHeader from "./roomComponents/RoomHeader";
-import { RoomThemesId, RoomThemesName } from "@/types/roomTypes";
 
 // const ROOM_WIDTH = 1200;
 // const ROOM_HEIGHT = 800;
@@ -60,20 +59,20 @@ export default function PhaserRoom() {
     (state: RootState) => state.miscSlice
   );
 
-  const themeFromUrl: RoomThemesId | undefined = (() => {
-    if (!themeFromUrlRaw) return undefined;
+  //! const themeFromUrl: RoomThemesId | undefined = (() => {
+  //   if (!themeFromUrlRaw) return undefined;
 
-    const parsed = Number(themeFromUrlRaw);
-    return Object.values(RoomThemesId).includes(parsed as RoomThemesId)
-      ? (parsed as RoomThemesId)
-      : undefined;
-  })();
+  //   const parsed = Number(themeFromUrlRaw);
+  //   return Object.values(RoomThemesId).includes(parsed as RoomThemesId)
+  //     ? (parsed as RoomThemesId)
+  //     : undefined;
+  // })();
 
-  useEffect(() => {
-    if (!roomTheme && themeFromUrl) {
-      dispatch(setRoomTheme(RoomThemesName[themeFromUrl]));
-    }
-  }, [roomTheme, themeFromUrl, dispatch]);
+  // useEffect(() => {
+  //   if (!roomTheme && themeFromUrl) {
+  //     dispatch(setRoomTheme(RoomThemesName[themeFromUrl]));
+  //   }
+  //! }, [roomTheme, themeFromUrl, dispatch]);
 
   // live kit connection
   useEffect(() => {
@@ -213,6 +212,7 @@ export default function PhaserRoom() {
                 availability: user.availability,
               })
             );
+            dispatch(setRoomTheme(room.roomTheme))
           }
         );
       }
