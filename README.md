@@ -4,6 +4,15 @@
 
 **Just a Meet (JAM)** is a web-based 2D multiplayer virtual environment that allows users to navigate a shared space, interact with objects, and engage in proximity-based audio/video communication. Inspired by platforms like **Kumospace** and **Workadventure**, it combines real-time presence, collaborative interactions, and dynamic rooms for a highly immersive experience.
 
+## Demo Room
+
+
+https://github.com/user-attachments/assets/53dd92d3-506d-4abe-9822-5553bbc40b83
+
+
+## Room Layout
+<img width="1081" height="761" alt="Larger Office" src="https://github.com/user-attachments/assets/2fb3d289-4222-4e9e-a331-53a61e6fdd67" />
+
 **Key Highlights:**
 - Grid-based movement and collision detection using Tiled maps
 - Real-time multiplayer sync with Socket.io
