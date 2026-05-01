@@ -1,17 +1,16 @@
-import type { RootState } from "@/Redux";
 import type { RemoteTrack, RemoteTrackPublication } from "livekit-client";
 import { useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
 
 export function ParticipantVideo({
   publications,
   isLocal,
   username,
 }: {
-  publications: {
+  publications?: {
     videoTracks: RemoteTrack[];
     audioTracks: RemoteTrack[];
-    remotePublication: RemoteTrackPublication;
+    videoPublication: RemoteTrackPublication | null;
+    audioPublication: RemoteTrackPublication | null;
   };
   isLocal?: boolean;
   username: string;
@@ -19,58 +18,58 @@ export function ParticipantVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  
   useEffect(() => {
-    const videoTrack = publications.videoTracks[0];
+    const videoTrack = publications?.videoTracks[0];
     if (videoTrack && videoRef.current) {
       videoTrack.attach(videoRef.current);
       return () => {
         if (!videoRef.current) return;
-        videoTrack.detach(videoRef?.current);
+        videoTrack.detach(videoRef.current);
       };
     }
-  }, [publications.videoTracks]);
+  }, [publications]);
 
   useEffect(() => {
-    const audioTrack = publications.audioTracks[0];
-    if (audioTrack && audioRef.current) {
+    const audioTrack = publications?.audioTracks[0];
+    if (audioTrack && audioRef.current && !isLocal) {
       audioTrack.attach(audioRef.current);
       return () => {
-        if(!audioRef.current) return
+        if (!audioRef.current) return;
         audioTrack.detach(audioRef.current);
       };
     }
-  }, [publications.audioTracks]);
+  }, [publications, isLocal]);
 
-  const isVideoEnabled = !publications.remotePublication.isMuted;
-  const isAudioEnabled = !publications.remotePublication.isMuted;
+  const isVideoEnabled =
+    !!publications?.videoTracks.length && !publications.videoPublication?.isMuted;
+  const isAudioEnabled =
+    !!publications?.audioTracks.length && !publications.audioPublication?.isMuted;
 
   return (
-    <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video">
-      {publications.videoTracks.length > 0 && isVideoEnabled ? (
+    <div className="relative min-h-0 overflow-hidden rounded-lg bg-gray-900 aspect-video">
+      {isVideoEnabled ? (
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted={isLocal}
-          className="w-full h-full object-cover"
+          className="h-full w-full object-cover"
         />
       ) : (
-        <div className="flex items-center justify-center w-full h-full bg-gray-700">
-          <span className="text-white text-lg font-bold">
+        <div className="flex h-full w-full items-center justify-center bg-gray-700">
+          <span className="text-lg font-bold text-white">
             {username[0]?.toUpperCase()}
           </span>
         </div>
       )}
 
-      {publications.audioTracks.length > 0 && !isLocal && (
+      {!isLocal && publications?.audioTracks.length ? (
         <audio ref={audioRef} autoPlay playsInline className="hidden" />
-      )}
+      ) : null}
 
-      {/* Overlay UI */}
-      <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm flex items-center gap-1">
+      <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/50 px-2 py-1 text-sm text-white">
         <span>{isLocal ? "You" : username}</span>
-        {!isAudioEnabled && <span>🔇</span>}
+        {!isAudioEnabled && <span>Muted</span>}
       </div>
     </div>
   );

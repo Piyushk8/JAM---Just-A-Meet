@@ -79,9 +79,6 @@ const Player = ({
       setInteractablesMap(builtMap);
     }
   }, [interactables]);
-  useEffect(() => {
-    console.log("mapBuilt", collisionMap, interactables);
-  }, [interactables, collisionMap]);
   // 🧩 Convert flat tiles[] → 2D array for compatibility
   const [collision2D, setCollision2D] = useState<CollisionMap | null>(null);
   useEffect(() => {

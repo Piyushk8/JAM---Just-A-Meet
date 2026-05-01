@@ -19,13 +19,16 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({
         const newMap = new Map(prev);
 
         const existing = newMap.get(participantId) || {
-          remotePublication: publication,
+          videoPublication: null,
+          audioPublication: null,
           audioTracks: [],
           videoTracks: [],
         };
         if (track.kind === "video") {
+          existing.videoPublication = publication;
           existing.videoTracks = [...existing.videoTracks, track];
         } else if (track.kind === "audio") {
+          existing.audioPublication = publication;
           existing.audioTracks = [...existing.audioTracks, track];
         }
         newMap.set(participantId, existing);
@@ -41,24 +44,44 @@ export const LiveKitProvider: React.FC<{ children: React.ReactNode }> = ({
       setParticipantsWithTracks((prev) => {
         const newMap = new Map(prev);
         const existing = newMap.get(participantId) || {
-          remotePublication: publication,
+          videoPublication: null,
+          audioPublication: null,
           audioTracks: [],
           videoTracks: [],
         };
         if (track.kind === "video") {
-          existing.videoTracks.filter((v) => v != track);
+          existing.videoTracks = existing.videoTracks.filter((v) => v !== track);
+          if (existing.videoPublication === publication) {
+            existing.videoPublication = null;
+          }
         } else if (track.kind === "audio") {
-          existing.audioTracks.filter((a) => a != track);
+          existing.audioTracks = existing.audioTracks.filter((a) => a !== track);
+          if (existing.audioPublication === publication) {
+            existing.audioPublication = null;
+          }
         }
-        newMap.set(participantId, existing);
+        if (existing.videoTracks.length === 0 && existing.audioTracks.length === 0) {
+          newMap.delete(participantId);
+        } else {
+          newMap.set(participantId, existing);
+        }
         return newMap;
       });
     };
 
-    manager.onTrackSubscribed(handleTrackSubscribed);
-    manager.onTrackUnsubscribed(handleTrackUnsubscribed);
+    const unsubscribeTrackSubscribed =
+      manager.onTrackSubscribed(handleTrackSubscribed);
+    const unsubscribeTrackUnsubscribed =
+      manager.onTrackUnsubscribed(handleTrackUnsubscribed);
+    const unsubscribeDisconnected = manager.onDisconnected(() => {
+      setParticipantsWithTracks(new Map());
+    });
 
-    return () => {};
+    return () => {
+      unsubscribeTrackSubscribed();
+      unsubscribeTrackUnsubscribed();
+      unsubscribeDisconnected();
+    };
   }, [manager]);
 
   return (

@@ -119,11 +119,11 @@ const ParticipantMedia: React.FC<ParticipantMediaProps> = ({
               className={`w-3 h-3 rounded-full ${
                 isLocal
                   ? audioTrack
-                    ? "bg-green-800"
-                    : "bg-red-800"
+                    ? "bg-green-500"
+                    : "bg-red-500"
                   : user.isAudioEnabled
-                  ? ""
-                  : ""
+                  ? "bg-green-500"
+                  : "bg-red-500"
               }`}
             />
           </div>

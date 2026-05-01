@@ -42,7 +42,6 @@ export function useMapBuilder(mapData: any | null) {
         const msg = ev.data;
         if (!msg) return;
         if (msg.type === "progress") {
-          optional: console.log("worker:", msg.message, msg.percent);
           return;
         }
         if (msg.type === "error") {

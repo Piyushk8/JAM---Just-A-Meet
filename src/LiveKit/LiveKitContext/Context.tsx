@@ -5,7 +5,8 @@ import type { liveKitManager } from "../liveKitManager";
 export type ParticipantTracks = Map<
   string, // participantId
   {
-    remotePublication: RemoteTrackPublication;
+    videoPublication: RemoteTrackPublication | null;
+    audioPublication: RemoteTrackPublication | null;
     videoTracks: RemoteTrack[];
     audioTracks: RemoteTrack[];
   }

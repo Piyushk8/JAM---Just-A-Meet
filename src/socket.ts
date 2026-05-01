@@ -5,6 +5,7 @@ import { SERVER_URL } from "./lib/consts";
 export type SocketType = Socket<ServerToClient , ClientToServer>;
 
 let socket: SocketType | null = null;
+let listenersBound = false;
 
 export const getSocket = (): SocketType => {
   if (!socket) {
@@ -13,12 +14,15 @@ export const getSocket = (): SocketType => {
       withCredentials: true,
     });
   }
-  socket.on("disconnect", (reason) => {
-    console.warn("Socket disconnected. Reason:", reason);
-  });
-  socket.on("connect",()=>{
-    console.log("socket connected")
-  })
+  if (!listenersBound) {
+    socket.on("disconnect", (reason) => {
+      console.warn("Socket disconnected. Reason:", reason);
+    });
+    socket.on("connect", () => {
+      console.log("socket connected");
+    });
+    listenersBound = true;
+  }
 
   return socket;
 };
@@ -35,6 +39,7 @@ export const disconnectSocket = () => {
   if (socket && socket.connected) {
     socket.disconnect();
     socket = null;
+    listenersBound = false;
   }
 };
 

@@ -1,19 +1,14 @@
 import { liveKitManager } from "@/LiveKit/liveKitManager";
-import {
-  LocalAudioTrack,
-  LocalVideoTrack,
-  createLocalAudioTrack,
-  createLocalVideoTrack,
-} from "livekit-client";
-import React, { createContext, useContext, useState } from "react";
+import { LocalAudioTrack, LocalVideoTrack } from "livekit-client";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 type LocalMediaContextType = {
   audioTrack: LocalAudioTrack | null;
   videoTrack: LocalVideoTrack | null;
-  enableVideo: () => Promise<void>;
-  disableVideo: () => Promise<void>;
-  enableAudio: () => Promise<void>;
-  disableAudio: () => Promise<void>;
+  enableVideo: () => Promise<boolean>;
+  disableVideo: () => Promise<boolean>;
+  enableAudio: () => Promise<boolean>;
+  disableAudio: () => Promise<boolean>;
 };
 
 const LocalMediaContext = createContext<LocalMediaContextType | null>(null);
@@ -31,60 +26,34 @@ export const useUserLocalMedia = () => {
 export const LocalMediaContextProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const [audioTrack, setAudioTrack] = useState<LocalAudioTrack | null>(null);
-  const [videoTrack, setVideoTrack] = useState<LocalVideoTrack | null>(null);
+  const [audioTrack, setAudioTrack] = useState<LocalAudioTrack | null>(
+    liveKitManager.getLocalAudioTrack()
+  );
+  const [videoTrack, setVideoTrack] = useState<LocalVideoTrack | null>(
+    liveKitManager.getLocalVideoTrack()
+  );
+
+  useEffect(() => {
+    return liveKitManager.onLocalMediaChanged(({ audioTrack, videoTrack }) => {
+      setAudioTrack(audioTrack);
+      setVideoTrack(videoTrack);
+    });
+  }, []);
 
   const enableVideo = async () => {
-    const track = await createLocalVideoTrack({
-      resolution: { width: 1280, height: 720 },
-      facingMode: "user",
-    });
-    setVideoTrack(track);
-
-    if (liveKitManager.room) {
-      await liveKitManager.room.localParticipant.publishTrack(track);
-    }
+    return liveKitManager.toggleVideo(true);
   };
 
-  /** Disable video */
   const disableVideo = async () => {
-    if (videoTrack) {
-      try {
-        await liveKitManager.room?.localParticipant.unpublishTrack(videoTrack);
-        videoTrack.stop();
-      } catch (err) {
-        console.error("Error disabling video:", err);
-      }
-      setVideoTrack(null);
-    }
+    return liveKitManager.toggleVideo(false);
   };
 
   const enableAudio = async () => {
-    try {
-      const track = await createLocalAudioTrack();
-      setAudioTrack(track);
-
-      if (liveKitManager.room) {
-        await liveKitManager.room.localParticipant.publishTrack(track);
-      }
-    } catch (error) {
-      console.error("Error enable audio:", error);
-    }
+    return liveKitManager.toggleAudio(true);
   };
 
   const disableAudio = async () => {
-    try {
-      if (audioTrack) {
-        if (liveKitManager.room) {
-          await liveKitManager.room.localParticipant.unpublishTrack(audioTrack);
-        }
-        audioTrack.stop();
-        setAudioTrack(null);
-      }
-    } catch (error) {
-      console.log("eroor disabling audio");
-    }
-    setAudioTrack(null);
+    return liveKitManager.toggleAudio(false);
   };
 
   return (

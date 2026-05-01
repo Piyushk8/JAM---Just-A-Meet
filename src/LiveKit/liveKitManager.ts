@@ -34,6 +34,11 @@ interface TrackState {
   lastError?: string;
 }
 
+interface LocalMediaSnapshot {
+  videoTrack: LocalVideoTrack | null;
+  audioTrack: LocalAudioTrack | null;
+}
+
 class LiveKitManager {
   room: Room | null = null;
   private subscribedToTrackIDs: Set<string>;
@@ -63,6 +68,8 @@ class LiveKitManager {
     track: RemoteTrack,
     publication: RemoteTrackPublication
   ) => void)[] = [];
+  private localMediaCallbacks: ((snapshot: LocalMediaSnapshot) => void)[] = [];
+  private disconnectedCallbacks: (() => void)[] = [];
 
   constructor() {
     this.subscribedToTrackIDs = new Set<string>();
@@ -104,12 +111,14 @@ class LiveKitManager {
       this.SetUpEventHandlers();
 
       // Warming up the connection early
-      this.room.prepareConnection(url, token);
+      this.room.prepareConnection(url, token).catch((err) => {
+        console.warn("prepareConnection failed (non-fatal):", err);
+      });
 
       await this.room.connect(url, token, {
         autoSubscribe: false,
       });
-     
+
       if (enableVideo) {
         try {
           await this.enableVideo();
@@ -118,14 +127,11 @@ class LiveKitManager {
         }
       }
 
-      // Publish local media
-      const p = this.room.localParticipant;
-      if (enableVideo || enableAudio) {
+      if (enableAudio) {
         try {
-          if (enableVideo) await p.setCameraEnabled(true);
-          if (enableAudio) await p.setMicrophoneEnabled(true);
+          await this.enableAudio();
         } catch (error) {
-          console.warn("Failed to enable camera/microphone:", error);
+          console.warn("Failed to enable audio on join:", error);
         }
       }
 
@@ -134,6 +140,7 @@ class LiveKitManager {
     } catch (error) {
       console.error("Error joining room:", error);
       this.managerState = "failed";
+      await this.forceCleanupTracks();
       await this.safeForceDisconnect();
       return null;
     }
@@ -184,6 +191,7 @@ class LiveKitManager {
       this.videoState.track = track;
 
       await this.room.localParticipant.publishTrack(track);
+      this.notifyLocalMediaChanged();
 
       // await this.createVideoPreview(track);
       // console.log("Video preview created");
@@ -219,6 +227,7 @@ class LiveKitManager {
       await this.safeStopTrack(this.videoState.track);
       this.videoState.track = undefined;
       this.videoState.element = undefined;
+      this.notifyLocalMediaChanged();
     } catch (error) {
       // console.error("Error during video disable:", error);
     } finally {
@@ -314,6 +323,7 @@ class LiveKitManager {
         this.room?.localParticipant.publishTrack(track),
         this.createTimeoutPromise(5000, "Audio track publish timeout"),
       ]);
+      this.notifyLocalMediaChanged();
     } catch (error) {
       console.error("Failed to enable audio:", error);
       await this.safeCleanupAudioTrack();
@@ -345,6 +355,7 @@ class LiveKitManager {
 
       await this.safeStopTrack(this.audioState.track);
       this.audioState.track = undefined;
+      this.notifyLocalMediaChanged();
     } catch (error) {
       console.error("Failed to disable audio:", error);
     } finally {
@@ -355,7 +366,6 @@ class LiveKitManager {
   // -------------  SYNC LOGIC RESIDE HERE
   syncSubscriptions(entered: string[], left: string[]) {
     if (!this.room || this.room.state !== ConnectionState.Connected) {
-      console.warn("Cannot sync subscriptions: room not connected");
       return;
     }
 
@@ -567,6 +577,11 @@ class LiveKitManager {
     ) => void
   ) {
     this.trackSubscribedCallbacks.push(cb);
+    return () => {
+      this.trackSubscribedCallbacks = this.trackSubscribedCallbacks.filter(
+        (handler) => handler !== cb
+      );
+    };
   }
 
   onTrackUnsubscribed(
@@ -577,6 +592,38 @@ class LiveKitManager {
     ) => void
   ) {
     this.trackUnsubscribedCallbacks.push(cb);
+    return () => {
+      this.trackUnsubscribedCallbacks = this.trackUnsubscribedCallbacks.filter(
+        (handler) => handler !== cb
+      );
+    };
+  }
+
+  onLocalMediaChanged(cb: (snapshot: LocalMediaSnapshot) => void) {
+    this.localMediaCallbacks.push(cb);
+    cb(this.getLocalMediaSnapshot());
+    return () => {
+      this.localMediaCallbacks = this.localMediaCallbacks.filter(
+        (handler) => handler !== cb
+      );
+    };
+  }
+
+  onDisconnected(cb: () => void) {
+    this.disconnectedCallbacks.push(cb);
+    return () => {
+      this.disconnectedCallbacks = this.disconnectedCallbacks.filter(
+        (handler) => handler !== cb
+      );
+    };
+  }
+
+  getLocalVideoTrack(): LocalVideoTrack | null {
+    return (this.videoState.track as LocalVideoTrack | undefined) ?? null;
+  }
+
+  getLocalAudioTrack(): LocalAudioTrack | null {
+    return (this.audioState.track as LocalAudioTrack | undefined) ?? null;
   }
 
   private handleTrackSubscribed = (
@@ -638,6 +685,13 @@ class LiveKitManager {
       this.managerState = "disconnected";
       this.subscribedToTrackIDs.clear();
       this.pendingToSubscribeToTrackIDs.clear();
+      this.disconnectedCallbacks.forEach((cb) => {
+        try {
+          cb();
+        } catch (error) {
+          console.warn("Error in disconnected callback:", error);
+        }
+      });
     } catch (error) {
       // console.error("Error in handleDisconnected:", error);
     }
@@ -647,10 +701,7 @@ class LiveKitManager {
     try {
       if (!this.room) return;
       if (!this.room.canPlaybackAudio) {
-        const btn = document.createElement("button");
-        // btn.textContent = "Click to enable audio";
-        btn.onclick = () => this.room?.startAudio().then(() => btn.remove());
-        document.body.appendChild(btn);
+        console.warn("Audio playback is blocked until the user interacts.");
       }
     } catch (error) {
       console.error("Error in handleAudioPlaybackStatusChanged:", error);
@@ -697,11 +748,13 @@ class LiveKitManager {
     await this.safeCleanupAudioTrack();
     this.videoState = { isPublishing: false, isUnpublishing: false };
     this.audioState = { isPublishing: false, isUnpublishing: false };
+    this.notifyLocalMediaChanged();
   }
 
   private async safeCleanupVideoTrack(): Promise<void> {
     if (this.videoState.track) {
       try {
+        await this.safeDetachTrack(this.videoState.track);
         await this.safeStopTrack(this.videoState.track);
       } catch (error) {
         console.warn("Error stopping video track:", error);
@@ -709,17 +762,20 @@ class LiveKitManager {
       this.videoState.track = undefined;
     }
     this.videoState.element = undefined;
+    this.notifyLocalMediaChanged();
   }
 
   private async safeCleanupAudioTrack(): Promise<void> {
     if (this.audioState.track) {
       try {
+        await this.safeDetachTrack(this.audioState.track);
         await this.safeStopTrack(this.audioState.track);
       } catch (error) {
         console.warn("Error stopping audio track:", error);
       }
       this.audioState.track = undefined;
     }
+    this.notifyLocalMediaChanged();
   }
 
   private async safeForceDisconnect(): Promise<void> {
@@ -731,6 +787,10 @@ class LiveKitManager {
       }
       this.room = null;
     }
+    // Always reset state even if room was already null
+    this.videoState = { isPublishing: false, isUnpublishing: false };
+    this.audioState = { isPublishing: false, isUnpublishing: false };
+    this.managerState = "disconnected";
   }
 
   private async safeDetachTrack(
@@ -738,18 +798,7 @@ class LiveKitManager {
   ): Promise<void> {
     try {
       if (track && typeof track.detach === "function") {
-        const elements = track.detach();
-        if (Array.isArray(elements)) {
-          elements.forEach((element) => {
-            try {
-              if (element && element.parentNode) {
-                element.parentNode.removeChild(element);
-              }
-            } catch (removeError) {
-              console.warn("Error removing track element:", removeError);
-            }
-          });
-        }
+        track.detach();
       }
     } catch (detachError) {
       console.warn("Error detaching track:", detachError);
@@ -767,6 +816,7 @@ class LiveKitManager {
       console.warn("Error stopping track:", stopError);
     }
   }
+
   /**
    * @param operation utility function that just adds a chain of promises to the 'videoOperationLock'
    * as multiple operation triggered can be challenging to handle so this handles each new call after previous one finishes
@@ -795,6 +845,24 @@ class LiveKitManager {
       }
     });
     return this.audioOperationLock as Promise<T>;
+  }
+
+  private getLocalMediaSnapshot(): LocalMediaSnapshot {
+    return {
+      videoTrack: this.getLocalVideoTrack(),
+      audioTrack: this.getLocalAudioTrack(),
+    };
+  }
+
+  private notifyLocalMediaChanged() {
+    const snapshot = this.getLocalMediaSnapshot();
+    this.localMediaCallbacks.forEach((cb) => {
+      try {
+        cb(snapshot);
+      } catch (error) {
+        console.warn("Error in local media callback:", error);
+      }
+    });
   }
 }
 

@@ -32,7 +32,7 @@ export const LocalPreview: React.FC = () => {
   }, [audioTrack]);
 
   return (
-    <div className="bg-gray-900 rounded-lg overflow-hidden relative aspect video">
+    <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-900">
       {videoTrack ? (
         <video
           ref={videoRef}

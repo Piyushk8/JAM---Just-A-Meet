@@ -213,7 +213,6 @@ const WarmUpLobby = () => {
     const roomId = location.state?.roomId;
     const roomName = location.state?.roomName;
     const { roomTheme } = RoomSetupStorage.get();
-    console.log("lobby",RoomSetupStorage.get().roomName,RoomSetupStorage.get().roomTheme)
     let payload: {
       roomId?: string;
       roomName?: string;

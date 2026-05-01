@@ -87,14 +87,29 @@ const miscSlice = createSlice({
       state.OnGoingConversations = action.payload;
     },
     addUserInConversation: (state, action: PayloadAction<Identity>) => {
-      state.OnGoingConversations?.members.push(action.payload);
+      if (!state.OnGoingConversations) return;
+      if (!state.OnGoingConversations.members.includes(action.payload)) {
+        state.OnGoingConversations.members.push(action.payload);
+      }
     },
     removeFromConversation: (state, action: PayloadAction<Identity>) => {
-      state.OnGoingConversations?.members.filter((m) => m != action.payload);
+      if (!state.OnGoingConversations) return;
+      state.OnGoingConversations.members =
+        state.OnGoingConversations.members.filter((m) => m !== action.payload);
+      state.OnGoingConversations.pending =
+        state.OnGoingConversations.pending.filter((m) => m !== action.payload);
     },
-    pendingToMemberInConversation: (_state, action: PayloadAction<Identity>) => {
-      addUserInConversation(action.payload);
-      removeFromConversation(action.payload);
+    pendingToMemberInConversation: (
+      state,
+      action: PayloadAction<Identity>
+    ) => {
+      if (!state.OnGoingConversations) return;
+      state.OnGoingConversations.pending =
+        state.OnGoingConversations.pending.filter((m) => m !== action.payload);
+      if (!state.OnGoingConversations.members.includes(action.payload)) {
+        state.OnGoingConversations.members.push(action.payload);
+      }
+      state.OnGoingConversations.status = "ongoing";
     },
     deleteConversation: (state, _action: PayloadAction<string>) => {
       state.OnGoingConversations = null;

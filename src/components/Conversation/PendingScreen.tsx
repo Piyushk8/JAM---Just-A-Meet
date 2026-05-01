@@ -58,9 +58,7 @@ const PendingScreen = ({ endCall }: { endCall: () => void }) => {
           </div>
 
           <div className="text-center">
-            <h3 className="text-xl font-semibold mb-2">
-              {status === "pending" && "Starting call..."}
-            </h3>
+            <h3 className="text-xl font-semibold mb-2">Starting call...</h3>
             <p className="text-gray-600">"Waiting for others to join"</p>
           </div>
 

@@ -175,7 +175,6 @@ export default function PhaserRoom() {
       socket.off("conversation-updated", handleConversationUpdated);
       socket.off("incoming-invite", handleIncomingInvite);
       socket.off("room-users", handleRoomUsers);
-      liveKitManager?.cleanup();
     };
   }, [socket, dispatch, liveKitManager]);
 

@@ -1,6 +1,7 @@
 import { useLiveKit } from "@/LiveKit/LiveKitContext/Context";
 import { useUserLocalMedia } from "@/Providers/LocalMedia/Context";
 import type { RootState } from "@/Redux";
+import { useSocket } from "@/SocketProvider";
 import React from "react";
 import { useSelector } from "react-redux";
 import MediaControls from "./MediaControls";
@@ -21,6 +22,7 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
     (state: RootState) => state.roomState
   );
   const { participantsWithTracks } = useLiveKit();
+  const socket = useSocket();
   const {
     audioTrack: localAudioTrack,
     videoTrack: localVideoTrack,
@@ -35,18 +37,34 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
 
   const handleToggleAudio = async () => {
     if (isAudioEnabled) {
-      await disableAudio();
+      const nextAudioEnabled = await disableAudio();
+      socket.emit("media-state-changed", {
+        isAudioEnabled: nextAudioEnabled,
+        isVideoEnabled,
+      });
     } else {
-      await enableAudio();
+      const nextAudioEnabled = await enableAudio();
+      socket.emit("media-state-changed", {
+        isAudioEnabled: nextAudioEnabled,
+        isVideoEnabled,
+      });
     }
   };
 
   const handleToggleVideo = async () => {
     try {
       if (isVideoEnabled) {
-        await disableVideo();
+        const nextVideoEnabled = await disableVideo();
+        socket.emit("media-state-changed", {
+          isAudioEnabled,
+          isVideoEnabled: nextVideoEnabled,
+        });
       } else {
-        await enableVideo();
+        const nextVideoEnabled = await enableVideo();
+        socket.emit("media-state-changed", {
+          isAudioEnabled,
+          isVideoEnabled: nextVideoEnabled,
+        });
       }
     } catch (error) {
       console.log("error toggle video");
@@ -54,13 +72,15 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
   };
 
   const nearbyUsers = React.useMemo(() => {
-    return nearbyParticipants.map((u) => usersInRoom[u]);
+    return nearbyParticipants
+      .map((u) => usersInRoom[u])
+      .filter((user): user is NonNullable<typeof user> => Boolean(user));
   }, [nearbyParticipants, usersInRoom]);
 
   const allUsers = React.useMemo(() => {
     const others = nearbyUsers;
     return currentUser ? [currentUser, ...others] : others;
-  }, [currentUser, nearbyParticipants]);
+  }, [currentUser, nearbyUsers]);
 
   const visibleUsers = allUsers.slice(0, maxVisible);
   const hasOverflow = allUsers.length > maxVisible;
@@ -91,7 +111,7 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
     }
   };
 
-  if (allUsers.length === 0) return null;
+  if (allUsers.length === 0 && !showControls) return null;
   return (
     <div className={getContainerClasses()}>
       {showControls && (
@@ -103,38 +123,40 @@ const RoomMediaBar: React.FC<RoomMediaBarProps> = ({
         />
       )}
 
-      <div className={getContentClasses()}>
-        {visibleUsers.map((user) => {
-          const isCurrentUserItem = user.id === currentUser?.id;
-          let videoTrack, audioTrack;
+      {allUsers.length > 0 && (
+        <div className={getContentClasses()}>
+          {visibleUsers.map((user) => {
+            const isCurrentUserItem = user.id === currentUser?.id;
+            let videoTrack, audioTrack;
 
-          if (isCurrentUserItem) {
-            videoTrack = localVideoTrack;
-            audioTrack = localAudioTrack;
-          } else {
-            const userTracks = participantsWithTracks.get(user.id);
-            videoTrack = userTracks?.videoTracks[0];
-            audioTrack = userTracks?.audioTracks[0];
-          }
+            if (isCurrentUserItem) {
+              videoTrack = localVideoTrack;
+              audioTrack = localAudioTrack;
+            } else {
+              const userTracks = participantsWithTracks.get(user.id);
+              videoTrack = userTracks?.videoTracks[0];
+              audioTrack = userTracks?.audioTracks[0];
+            }
 
-          return (
-            <ParticipantMedia
-              key={user.id}
-              user={user}
-              videoTrack={videoTrack}
-              audioTrack={audioTrack}
-              isCurrentUser={isCurrentUserItem}
-              isLocal={isCurrentUserItem}
-            />
-          );
-        })}
+            return (
+              <ParticipantMedia
+                key={user.id}
+                user={user}
+                videoTrack={videoTrack}
+                audioTrack={audioTrack}
+                isCurrentUser={isCurrentUserItem}
+                isLocal={isCurrentUserItem}
+              />
+            );
+          })}
 
-        {hasOverflow && (
-          <div className="flex items-center justify-center p-4 text-white text-sm">
-            +{allUsers.length - maxVisible} more
-          </div>
-        )}
-      </div>
+          {hasOverflow && (
+            <div className="flex items-center justify-center p-4 text-white text-sm">
+              +{allUsers.length - maxVisible} more
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
