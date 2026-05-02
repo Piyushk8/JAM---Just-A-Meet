@@ -39,13 +39,14 @@ import ChatPanel from "./ChatPanel";
 import RoomMediaBar from "./TopMediaBar/RoomMedia";
 import InviteToRoom from "./roomComponents/InviteToRoom";
 import RoomHeader from "./roomComponents/RoomHeader";
+import InteractableModal from "./InteractableModal";
 
 // const ROOM_WIDTH = 1200;
 // const ROOM_HEIGHT = 800;
 
 export default function PhaserRoom() {
   const [searchParams] = useSearchParams();
-  const themeFromUrlRaw = searchParams.get("th"); 
+  const themeFromUrlRaw = searchParams.get("th");
 
   const socket = useSocket();
   const dispatch = useDispatch();
@@ -265,6 +266,7 @@ export default function PhaserRoom() {
       <ChatPanel />
       <InvitationToasts />
       {OnGoingConversations && <CallScreen />}
+      <InteractableModal />
     </div>
   );
 }

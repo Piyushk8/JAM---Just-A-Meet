@@ -300,161 +300,172 @@ const WarmUpLobby = () => {
   }, [mediaStream]);
 
   return (
-    <div
-      className="flex flex-col items-center justify-center w-screen h-screen p-4"
-      style={{
-        minHeight: "100vh",
-        width: "100%",
-        backgroundImage: `
-      radial-gradient(circle at 25% 25%, rgba(255,255,255,0.8) 1px, transparent 2px),
-      radial-gradient(circle at 75% 75%, rgba(255,255,255,0.6) 0.5px, transparent 1px),
-      radial-gradient(circle at 50% 10%, rgba(255,255,255,1) 1.5px, transparent 2px),
-      radial-gradient(circle at 10% 80%, rgba(255,255,255,0.4) 0.8px, transparent 1.5px),
-      radial-gradient(circle at 90% 20%, rgba(255,255,255,0.9) 1px, transparent 2px),
-      radial-gradient(circle at 30% 60%, rgba(255,255,255,0.5) 0.6px, transparent 1px),
-      radial-gradient(circle at 80% 90%, rgba(255,255,255,0.7) 1.2px, transparent 2px),
-      radial-gradient(circle at 15% 40%, rgba(255,255,255,0.3) 0.4px, transparent 1px),
-      linear-gradient(360deg, hsla(228, 27%, 29%, 1) 19%, hsla(227, 82%, 4%, 1) 100%)
-    `,
-        backgroundSize:
-          "300px 300px, 200px 200px, 400px 400px, 250px 250px, 350px 350px, 180px 180px, 320px 320px, 150px 150px, 100% 100%",
-        backgroundPosition:
-          "0 0, 100px 50px, 200px 100px, 50px 200px, 150px 0px, 250px 150px, 300px 50px, 0px 100px, 0 0",
-        backgroundRepeat: "repeat",
-      }}
-    >
-      <h2 className="text-white text-4xl font-semibold mb-8 text-center">
-        Welcome !
-      </h2>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center w-full p-6 relative overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-96 bg-blue-600 rounded-b-[100px] shadow-lg opacity-10 transform -translate-y-20 pointer-events-none" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-400 rounded-full blur-3xl opacity-20 pointer-events-none" />
+      <div className="absolute top-20 -left-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl opacity-10 pointer-events-none" />
 
-      {/* Video & Avatar Section */}
-      <div className="flex flex-col md:flex-row justify-center items-center gap-10 w-full">
-        {/* Video Preview & Controls */}
-        <div className="flex flex-col items-center space-y-4">
-          <VideoPreview videoRef={videoRef} />
-          {!mediaStream ? (
-            <button
-              onClick={requestPermissions}
-              disabled={isRequestingPermissions}
-              className="px-6 py-2 bg-blue-700 text-white rounded-xl hover:bg-blue-600 transition disabled:bg-gray-500 disabled:cursor-not-allowed"
-            >
-              {isRequestingPermissions
-                ? "Requesting..."
-                : "Allow Camera & Microphone"}
-            </button>
-          ) : (
-            <div className="flex flex-row gap-4">
-              {/* Video Button */}
-              <VideoSelection
-                setShowVideoDropdown={setShowVideoDropdown}
-                showVideoDropdown={showVideoDropdown}
-                videoDevices={videoDevices}
-                videoOn={videoOn}
-                handleVideoChange={handleVideoChange}
-                toggleVideo={toggleVideo}
-                selectedVideo={selectedVideo}
-                setSelectedVideo={setSelectedVideo}
-              />
-              {/* Audio Button */}
-              <div
-                className={`px-4 py-2 flex items-center gap-2 rounded-2xl transition ${
-                  audioOn
-                    ? "bg-green-500 text-white"
-                    : "bg-red-500 text-red-200"
-                }`}
-              >
-                <button className="" onClick={toggleAudio}>
-                  {audioOn ? <Mic size={18} /> : <MicOff size={18} />}
-                </button>
-                <p className="opacity-50">|</p>
-                <DropdownMenu
-                  open={showAudioDropdown}
-                  onOpenChange={setShowAudioDropdown}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <span>
-                      {showAudioDropdown ? (
-                        <ChevronUp size={18} />
-                      ) : (
-                        <ChevronDownIcon size={18} />
-                      )}
-                    </span>
-                  </DropdownMenuTrigger>
+      {/* Main Card */}
+      <div className="relative z-10 bg-white/80 backdrop-blur-xl border border-slate-200/60 shadow-2xl rounded-[32px] p-8 md:p-12 w-full max-w-5xl flex flex-col gap-8 items-center">
 
-                  <DropdownMenuContent className="w-48 text-sm text-gray-800 rounded-md shadow-lg z-50">
-                    <DropdownMenuLabel>Audio Devices</DropdownMenuLabel>
-                    {audioDevices.map((device) => (
-                      <DropdownMenuCheckboxItem
-                        key={device.deviceId}
-                        className="cursor-pointer"
-                        checked={selectedAudio === device.deviceId}
-                        onCheckedChange={() =>
-                          setSelectedAudio(device.deviceId)
-                        }
-                        onClick={() => handleAudioChange(device.deviceId)}
-                      >
-                        {device.label || `Microphone ${device.deviceId}`}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          )}
-
-          {/* Error Message */}
-          <p className="text-red-400 mt-2 text-sm min-h-[1.25rem] text-center max-w-sm">
-            {error || "\u00A0"}
+        <div className="text-center mb-2">
+          <h2 className="text-slate-800 text-3xl font-bold tracking-tight">
+            Check your surroundings
+          </h2>
+          <p className="text-slate-500 mt-2 font-medium">
+            Make sure your camera and microphone are working before you enter.
           </p>
         </div>
 
-        {/* Avatar Selection */}
-        <div className="flex flex-col items-center space-y-4">
-          <h2 className="text-white text-lg font-semibold">
-            Select Your Avatar
-          </h2>
-          <div className="flex flex-wrap gap-4 justify-center">
-            {Sprites.map((a) => (
-              <motion.div
-                key={a}
-                className="w-16 h-16 backdrop-blur-3xl bg-transparent ring-white rounded-full flex justify-center items-center cursor-pointer hover:ring-1 hover:ring-gray-400 transition"
-                whileHover={{
-                  scale: 1.3,
-                  transition: { duration: 0.15, ease: "easeOut" },
-                }}
-                animate={{
-                  scale: SelectedCharacter === a ? 1.5 : 1,
-                  transition: { duration: 0.15, ease: "easeOut" },
-                }}
-                onClick={() => setSelectedCharacter(a)}
+        {/* Video & Avatar Section */}
+        <div className="flex flex-col lg:flex-row justify-center items-center lg:items-stretch gap-12 w-full">
+
+          {/* Video Preview & Controls */}
+          <div className="flex flex-col items-center space-y-5 w-full max-w-sm">
+            <div className="w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-inner border-4 border-slate-100/50 relative flex items-center justify-center">
+              <VideoPreview videoRef={videoRef} />
+            </div>
+
+            {!mediaStream ? (
+              <button
+                onClick={requestPermissions}
+                disabled={isRequestingPermissions}
+                className="w-full py-3.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md active:scale-95 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed disabled:active:scale-100"
               >
-                <img src={`/assets/character/single/${a}_idle_anim_22.png`} />
-              </motion.div>
-            ))}
+                {isRequestingPermissions
+                  ? "Requesting..."
+                  : "Allow Camera & Mic"}
+              </button>
+            ) : (
+              <div className="flex flex-row gap-4 w-full justify-center">
+                {/* Video Button */}
+                <VideoSelection
+                  setShowVideoDropdown={setShowVideoDropdown}
+                  showVideoDropdown={showVideoDropdown}
+                  videoDevices={videoDevices}
+                  videoOn={videoOn}
+                  handleVideoChange={handleVideoChange}
+                  toggleVideo={toggleVideo}
+                  selectedVideo={selectedVideo}
+                  setSelectedVideo={setSelectedVideo}
+                />
+
+                {/* Audio Button */}
+                <div
+                  className={`px-4 py-2.5 flex items-center gap-2 rounded-2xl transition-all shadow-sm ${audioOn
+                      ? "bg-slate-800 text-white hover:bg-slate-700"
+                      : "bg-rose-100 text-rose-600 hover:bg-rose-200"
+                    }`}
+                >
+                  <button onClick={toggleAudio} className="p-1">
+                    {audioOn ? <Mic size={20} /> : <MicOff size={20} />}
+                  </button>
+                  <div className="w-px h-5 bg-current opacity-20" />
+                  <DropdownMenu
+                    open={showAudioDropdown}
+                    onOpenChange={setShowAudioDropdown}
+                  >
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-1 hover:bg-black/10 rounded-full transition-colors">
+                        {showAudioDropdown ? (
+                          <ChevronUp size={18} />
+                        ) : (
+                          <ChevronDownIcon size={18} />
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent className="w-48 text-sm text-slate-800 rounded-xl shadow-lg z-50 p-1 border-slate-100">
+                      <DropdownMenuLabel className="font-semibold text-xs uppercase text-slate-500 px-2 py-1.5">Audio Devices</DropdownMenuLabel>
+                      {audioDevices.map((device) => (
+                        <DropdownMenuCheckboxItem
+                          key={device.deviceId}
+                          className="cursor-pointer rounded-lg focus:bg-slate-100 py-2 px-2.5"
+                          checked={selectedAudio === device.deviceId}
+                          onCheckedChange={() =>
+                            setSelectedAudio(device.deviceId)
+                          }
+                          onClick={() => handleAudioChange(device.deviceId)}
+                        >
+                          {device.label || `Microphone ${device.deviceId}`}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            <div className="min-h-[1.5rem] w-full text-center">
+              {error && (
+                <p className="text-rose-500 text-sm font-medium animate-in slide-in-from-top-1 bg-rose-50 py-1.5 px-3 rounded-lg border border-rose-100">
+                  {error}
+                </p>
+              )}
+            </div>
           </div>
 
-          <button
-            onClick={handleEnterRoom}
-            disabled={!canEnterRoom}
-            className={`flex px-4 py-2 hover:scale-x-95 hover:scale-y-95 rounded-2xl 
-              justify-center gap-2 items-center text-sm transition-all ${
-                canEnterRoom
-                  ? "bg-blue-700 text-white hover:bg-blue-600"
-                  : "bg-gray-500 text-gray-300 cursor-not-allowed"
-              }`}
-            title={
-              !canEnterRoom
-                ? "Please allow camera and microphone access, and select an avatar"
-                : ""
-            }
-          >
-            {!canEnterRoom && (!hasVideoPermission || !hasAudioPermission)
-              ? "Permissions Required"
-              : !currentUser?.sprite
-              ? "Select Avatar"
-              : "Proceed to room"}
-            <ArrowRight className="size-5" />
-          </button>
+          {/* Divider for desktop */}
+          <div className="hidden lg:block w-px h-auto bg-slate-200" />
+
+          {/* Avatar Selection */}
+          <div className="flex flex-col items-center justify-center space-y-8 w-full max-w-sm">
+            <div className="text-center">
+              <h3 className="text-slate-800 text-lg font-bold">
+                Select Your Avatar
+              </h3>
+              <p className="text-slate-500 text-sm mt-1">This is how others will see you</p>
+            </div>
+
+            <div className="flex flex-wrap gap-4 justify-center bg-slate-50 p-6 rounded-2xl border border-slate-100 shadow-inner">
+              {Sprites.map((a) => (
+                <motion.div
+                  key={a}
+                  className={`w-14 h-14 rounded-full flex justify-center items-center cursor-pointer transition-colors ${SelectedCharacter === a ? 'bg-blue-100 shadow-md ring-2 ring-blue-500 ring-offset-2' : 'bg-white shadow-sm hover:bg-slate-100 border border-slate-200'}`}
+                  whileHover={{
+                    scale: 1.15,
+                    transition: { duration: 0.15, ease: "easeOut" },
+                  }}
+                  animate={{
+                    scale: SelectedCharacter === a ? 1.25 : 1,
+                    transition: { duration: 0.15, ease: "easeOut" },
+                  }}
+                  onClick={() => setSelectedCharacter(a)}
+                >
+                  <img src={`/assets/character/single/${a}_idle_anim_22.png`} className="w-10 h-10 object-contain" style={{ imageRendering: "pixelated" }} />
+                </motion.div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleEnterRoom}
+              disabled={!canEnterRoom}
+              className={`w-full py-4 rounded-xl font-semibold shadow-md relative overflow-hidden flex items-center justify-center gap-2 transition-all ${canEnterRoom
+                  ? "bg-emerald-600 text-white hover:bg-emerald-700 hover:shadow-xl active:scale-95"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                }`}
+            >
+              {IsJoining ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span>Joining...</span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    {!canEnterRoom && (!hasVideoPermission || !hasAudioPermission)
+                      ? "Permissions Required"
+                      : !SelectedCharacter
+                        ? "Select Avatar"
+                        : "Join Office"}
+                  </span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

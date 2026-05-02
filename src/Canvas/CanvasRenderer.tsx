@@ -38,7 +38,7 @@ export default function CanvasRenderer({
 
   const [joystickMovement, setJoystickMovement] = useState<{ x: number; y: number } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [camera, setCamera] = useState({ x: 0, y: 0 });
+  const cameraRef = useRef({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -52,7 +52,6 @@ export default function CanvasRenderer({
 
   const nearbyUserIds = new Set(nearbyParticipants);
   const shouldRenderRef = useRef<boolean>(true);
-  const lastCameraRef = useRef(camera);
 
   /** 🧹 Cleanup chunks on unmount */
   useEffect(() => {
@@ -116,24 +115,23 @@ export default function CanvasRenderer({
     const clampedTargetX = Math.max(0, Math.min(targetX, worldWidth - viewport.width));
     const clampedTargetY = Math.max(0, Math.min(targetY, worldHeight - viewport.height));
 
-    setCamera((prevCamera) => {
-      const diffX = clampedTargetX - prevCamera.x;
-      const diffY = clampedTargetY - prevCamera.y;
+    const prevCamera = cameraRef.current;
+    const diffX = clampedTargetX - prevCamera.x;
+    const diffY = clampedTargetY - prevCamera.y;
 
-      if (Math.abs(diffX) < CAMERA_DEAD_ZONE && Math.abs(diffY) < CAMERA_DEAD_ZONE) {
-        return prevCamera;
-      }
-
-      return {
+    if (Math.abs(diffX) >= CAMERA_DEAD_ZONE || Math.abs(diffY) >= CAMERA_DEAD_ZONE) {
+      cameraRef.current = {
         x: prevCamera.x + diffX * CAMERA_SMOOTH_FACTOR,
         y: prevCamera.y + diffY * CAMERA_SMOOTH_FACTOR,
       };
-    });
+      shouldRenderRef.current = true;
+    }
   }, [currentUser, mapData, viewport.width, viewport.height]);
 
   /** 🎨 Chunked background rendering */
   const renderVisibleChunks = useCallback(
     (ctx: CanvasRenderingContext2D) => {
+      const camera = cameraRef.current;
       const startChunkX = Math.floor(camera.x / CHUNK_SIZE);
       const startChunkY = Math.floor(camera.y / CHUNK_SIZE);
       const endChunkX = Math.ceil((camera.x + viewport.width) / CHUNK_SIZE);
@@ -153,12 +151,13 @@ export default function CanvasRenderer({
         }
       }
     },
-    [camera, viewport.width, viewport.height, mapData, tilesetImages]
+    [viewport.width, viewport.height, mapData, tilesetImages]
   );
 
   /** 👤 Player rendering */
   const renderPlayer = useCallback(
     (ctx: CanvasRenderingContext2D, player: User) => {
+      const camera = cameraRef.current;
       let tilePos = ensureTilePosition({ x: player.x, y: player.y });
       if (!tilePos) tilePos = pixelToTile({ x: player.x, y: player.y });
 
@@ -181,12 +180,13 @@ export default function CanvasRenderer({
 
       ctx.drawImage(character.img, screenX, screenY, TILE_SIZE, TILE_SIZE);
     },
-    [characters, camera, viewport.width, viewport.height]
+    [characters, viewport.width, viewport.height]
   );
 
   /** 🏷️ Player labels */
   const renderAllPlayerLabels = useCallback(
     (ctx: CanvasRenderingContext2D, players: User[]) => {
+      const camera = cameraRef.current;
       ctx.font = "bold 14px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
@@ -216,7 +216,7 @@ export default function CanvasRenderer({
         ctx.fillText(player.username, textX, textY);
       });
     },
-    [camera, viewport.width, viewport.height]
+    [viewport.width, viewport.height]
   );
 
   /** 👥 Combine players */
@@ -252,16 +252,6 @@ export default function CanvasRenderer({
     shouldRenderRef.current = false;
     animationFrameRef.current = requestAnimationFrame(render);
   }, [renderVisibleChunks, renderPlayer, renderAllPlayerLabels, players, updateSmoothCamera]);
-
-  /** 🧭 Detect camera change (dirty frame) */
-  useEffect(() => {
-    const dx = Math.abs(camera.x - lastCameraRef.current.x);
-    const dy = Math.abs(camera.y - lastCameraRef.current.y);
-    if (dx > 0.5 || dy > 0.5) {
-      shouldRenderRef.current = true;
-      lastCameraRef.current = camera;
-    }
-  }, [camera]);
 
   /** 💤 Handle tab visibility */
   useEffect(() => {
@@ -311,8 +301,8 @@ export default function CanvasRenderer({
         <div
           style={{
             position: "fixed",
-            left: getInteractionLabelPosition(closestInteraction).x - camera.x,
-            top: getInteractionLabelPosition(closestInteraction).y - camera.y,
+            left: getInteractionLabelPosition(closestInteraction).x - cameraRef.current.x,
+            top: getInteractionLabelPosition(closestInteraction).y - cameraRef.current.y,
             transform: "translate(-50%, -100%)",
             background: "rgba(0,0,0,0.85)",
             color: "#fff",

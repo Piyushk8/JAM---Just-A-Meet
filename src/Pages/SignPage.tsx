@@ -157,128 +157,147 @@ const SignPage = () => {
   }, [isSignInPage]);
 
   return (
-    <div className="min-h-screen bg-slate-900 overflow-hidden relative">
-      {/* Cloud Layers */}
-      <div className="absolute inset-0">
-        {cloudParts.map((cloudPath, index) => (
-          <motion.div
-            key={index}
-            className="absolute inset-0 will-change-transform"
-            animate={{ x: [0, 40, 0], opacity: [0.7, 1, 0.7] }}
-            transition={{
-              duration: 20 + index * 5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: index * 2,
-            }}
-          >
-            <img
-              src={cloudPath}
-              alt={`Cloud layer ${index + 1}`}
-              className="w-full h-full object-cover"
-              style={{
-                mixBlendMode: index % 2 === 0 ? "normal" : "overlay",
-              }}
-            />
-          </motion.div>
-        ))}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-blue-900/50 to-cyan-900/60" />
-      </div>
-
-      {/* Floating Characters */}
-      <div className="absolute inset-0 pointer-events-none">
-        {characters.map((character, i) => {
-          const pos = floatingPositions[i];
-          return (
+    <div className="min-h-screen bg-white flex flex-col md:flex-row overflow-hidden relative">
+      {/* Left Side: Graphic / World Preview */}
+      <div className="relative w-full md:w-[55%] h-[40vh] md:h-screen bg-slate-900 overflow-hidden flex-shrink-0 shadow-xl z-0">
+        {/* Cloud Layers */}
+        <div className="absolute inset-0">
+          {cloudParts.map((cloudPath, index) => (
             <motion.div
-              key={character.name}
-              className="absolute will-change-transform"
-              style={{ left: pos.left, top: pos.top }}
-              animate={{
-                y: [0, -20, 0],
-                x: [0, 10, -10, 0],
-                rotate: [0, 3, -3, 0],
-                opacity: [0.9, 1, 0.9],
-              }}
+              key={index}
+              className="absolute inset-0 will-change-transform"
+              animate={{ x: [0, 40, 0], opacity: [0.7, 1, 0.7] }}
               transition={{
-                duration: 6 + i,
+                duration: 20 + index * 5,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: pos.delay,
+                delay: index * 2,
               }}
             >
               <img
-                src={character.path}
-                alt={character.name}
-                className="w-16 md:w-20 object-contain drop-shadow-lg"
-                style={{ transform: `scale(${pos.scale})` }}
+                src={cloudPath}
+                alt={`Cloud layer ${index + 1}`}
+                className="w-full h-full object-cover"
+                style={{
+                  mixBlendMode: index % 2 === 0 ? "normal" : "overlay",
+                }}
               />
             </motion.div>
-          );
-        })}
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/70 via-blue-900/40 to-cyan-900/50" />
+        </div>
+
+        {/* Floating Characters */}
+        <div className="absolute inset-0 pointer-events-none">
+          {characters.map((character, i) => {
+            const pos = floatingPositions[i];
+            return (
+              <motion.div
+                key={character.name}
+                className="absolute will-change-transform"
+                style={{ left: pos.left, top: pos.top }}
+                animate={{
+                  y: [0, -20, 0],
+                  x: [0, 10, -10, 0],
+                  rotate: [0, 3, -3, 0],
+                  opacity: [0.9, 1, 0.9],
+                }}
+                transition={{
+                  duration: 6 + i,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: pos.delay,
+                }}
+              >
+                <img
+                  src={character.path}
+                  alt={character.name}
+                  className="w-16 md:w-24 object-contain drop-shadow-2xl"
+                  style={{ transform: `scale(${pos.scale})`, imageRendering: "pixelated" }}
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="absolute bottom-10 left-0 w-full text-center px-6 z-10 hidden md:block">
+          <h2 className="text-white text-4xl font-bold tracking-tight mb-3 drop-shadow-md">
+            Virtual HQ
+          </h2>
+          <p className="text-blue-100 text-lg font-medium drop-shadow-md">
+            The spatial office for remote teams.
+          </p>
+        </div>
       </div>
 
-      {/* Auth Content */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+      {/* Right Side: Auth Content */}
+      <div className="relative z-10 w-full md:w-[45%] flex flex-col items-center justify-center px-8 py-12 md:py-0 bg-white md:-ml-6 md:rounded-l-[40px] shadow-[-20px_0_40px_-10px_rgba(0,0,0,0.1)]">
         <motion.div
-          className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/20"
-          initial={{ opacity: 0, y: 30, scale: 0.9 }}
+          className="w-full max-w-sm"
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
+          <div className="md:hidden text-center mb-8">
+             <h2 className="text-slate-800 text-3xl font-bold tracking-tight mb-2">
+              Virtual HQ
+            </h2>
+            <p className="text-slate-500 font-medium">
+              The spatial office for remote teams.
+            </p>
+          </div>
+
           <motion.h1
-            className="text-3xl font-bold mb-2 text-center text-white"
+            className="text-3xl font-bold mb-2 text-slate-800"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
           >
-            Welcome to{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-              Virtual HQ
-            </span>
+            {isSignInPage ? "Welcome back" : "Get started"}
           </motion.h1>
 
           <motion.p
-            className="text-center text-gray-300 mb-6 font-light"
+            className="text-slate-500 mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
           >
             {isSignInPage
-              ? "Sign in to your workspace"
-              : "Create your workspace"}
+              ? "Sign in to your workspace to see who's around."
+              : "Create an account to join the virtual office."}
           </motion.p>
 
           {state.success && state.user ? (
             <motion.div
-              className="text-center space-y-4"
-              initial={{ opacity: 0, scale: 0.9 }}
+              className="space-y-6"
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.4 }}
             >
-              <div className="p-4 bg-green-500/20 border border-green-400/30 rounded-xl backdrop-blur-sm">
-                <p className="text-green-300 font-semibold text-lg">
-                  {" "}
+              <div className="p-6 bg-emerald-50 border border-emerald-100 rounded-2xl text-center">
+                <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                   <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                </div>
+                <p className="text-emerald-800 font-semibold text-lg">
                   {state.user.mode === "signin"
-                    ? "Welcome back"
+                    ? "Signed in successfully"
                     : "Account created"}
-                  !
                 </p>
-                <p className="text-white mt-2">
-                  Hello,{" "}
-                  <span className="font-bold text-cyan-300">
+                <p className="text-emerald-600 mt-1">
+                  Ready when you are,{" "}
+                  <span className="font-bold">
                     {state.user.userName}
                   </span>
                 </p>
               </div>
 
               <motion.button
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 px-6 py-3 rounded-xl text-white font-semibold shadow-lg"
-                whileHover={{ scale: 1.02 }}
+                className="w-full bg-slate-900 text-white px-6 py-4 rounded-xl font-semibold shadow-md hover:shadow-xl transition-all"
+                whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate("/join")}
               >
-                Enter the Office 🚪
+                Enter the Office
               </motion.button>
             </motion.div>
           ) : (
@@ -296,30 +315,32 @@ const SignPage = () => {
               />
 
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
               >
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Username</label>
                 <input
                   type="text"
                   name="username"
-                  placeholder="Username"
-                  className="w-full bg-white/10 border border-white/20 p-4 rounded-xl text-white placeholder-gray-300 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent transition-all"
+                  placeholder="Enter your username"
+                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3.5 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-slate-300"
                   required
                   autoComplete="username"
                 />
               </motion.div>
 
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 }}
+                transition={{ duration: 0.4, delay: 0.5 }}
               >
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5 ml-1">Password</label>
                 <input
                   type="password"
                   name="password"
-                  placeholder="Password"
-                  className="w-full bg-white/10 border border-white/20 p-4 rounded-xl text-white placeholder-gray-300 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent transition-all"
+                  placeholder="Enter your password"
+                  className="w-full bg-slate-50 border border-slate-200 px-4 py-3.5 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all hover:border-slate-300"
                   required
                   autoComplete={
                     isSignInPage ? "current-password" : "new-password"
@@ -329,65 +350,62 @@ const SignPage = () => {
 
               {state.error && (
                 <motion.div
-                  className="p-3 bg-red-500/20 border border-red-400/30 rounded-xl backdrop-blur-sm"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <p className="text-sm text-red-300">{state.error}</p>
+                  <svg className="w-5 h-5 text-rose-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <p className="text-sm text-rose-700 font-medium">{state.error}</p>
                 </motion.div>
               )}
 
-              <motion.button
-                type="submit"
-                disabled={pending}
-                className={`w-full py-4 rounded-xl text-white font-semibold shadow-lg transition-all backdrop-blur-sm ${
-                  isSignInPage
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                    : "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-                whileHover={!pending ? { scale: 1.02 } : {}}
-                whileTap={!pending ? { scale: 0.98 } : {}}
-                initial={{ opacity: 0, y: 20 }}
+              <motion.div 
+                className="pt-2"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.7 }}
+                transition={{ duration: 0.5, delay: 0.6 }}
               >
-                {pending ? (
-                  <span className="flex items-center justify-center">
-                    <motion.div
-                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-3"
-                      animate={{ rotate: 360 }}
-                      transition={{
-                        duration: 1,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                    />
-                    {isSignInPage ? "Signing in..." : "Signing up..."}
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="w-full py-3.5 rounded-xl text-white font-semibold shadow-md bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed transition-all relative overflow-hidden"
+                >
+                  <span className={`flex items-center justify-center ${pending ? 'opacity-0' : 'opacity-100'}`}>
+                    {isSignInPage ? "Sign In" : "Create Account"}
                   </span>
-                ) : isSignInPage ? (
-                  "Sign In "
-                ) : (
-                  "Sign Up "
-                )}
-              </motion.button>
+                  {pending && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <motion.div
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                      />
+                    </span>
+                  )}
+                </button>
+              </motion.div>
 
               <motion.div
-                className="text-center mt-4"
+                className="text-center mt-6"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.8 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
               >
-                <p className="text-gray-300">
+                <p className="text-slate-500 text-sm">
                   {isSignInPage
                     ? "New to Virtual HQ? "
                     : "Already have an account? "}
                   <button
                     type="button"
-                    className="text-cyan-400 underline hover:text-cyan-300 font-medium transition-colors"
+                    className="text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors"
                     onClick={() => setIsSignInPage(!isSignInPage)}
                   >
-                    {isSignInPage ? "Create account" : "Sign in"}
+                    {isSignInPage ? "Create an account" : "Sign in here"}
                   </button>
                 </p>
               </motion.div>

@@ -16,7 +16,9 @@ export const getSocket = (): SocketType => {
   }
   if (!listenersBound) {
     socket.on("disconnect", (reason) => {
-      console.warn("Socket disconnected. Reason:", reason);
+      if (reason !== "io client disconnect") {
+        console.warn("Socket disconnected. Reason:", reason);
+      }
     });
     socket.on("connect", () => {
       console.log("socket connected");
@@ -38,8 +40,8 @@ export const connectSocket = (userId: string) => {
 export const disconnectSocket = () => {
   if (socket && socket.connected) {
     socket.disconnect();
-    socket = null;
-    listenersBound = false;
+    // Intentionally keeping the socket instance alive so listeners (socket.on) 
+    // are not destroyed if the socket reconnects (e.g., during React strict mode or HMR).
   }
 };
 
